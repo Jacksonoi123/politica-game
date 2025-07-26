@@ -9,22 +9,22 @@ app.use(express.json());
 let inMemoryUsers = [];
 
 app.get('/', (req, res) => {
-  console.log('Requisição GET / recebida');
+  console.log('GET / - Server is running');
   res.json({ activeStatus: true, error: false, message: 'Server is running!' });
 });
 
-app.post('/register', async (req, res) => {
-  console.log('Requisição POST /register recebida', req.body);
+app.post('/register', (req, res) => {
+  console.log('POST /register - Received:', req.body);
   try {
     const { name, email, password, nation } = req.body;
     if (!name || !email || !password || !nation) {
-      console.log('Dados inválidos');
+      console.log('Invalid data');
       return res.status(400).json({ message: 'Dados inválidos.' });
     }
 
     const users = inMemoryUsers;
     if (users.find(user => user.email === Buffer.from(email).toString('base64'))) {
-      console.log('Email já cadastrado');
+      console.log('Email already registered');
       return res.status(400).json({ message: 'Email já cadastrado.' });
     }
 
@@ -41,11 +41,11 @@ app.post('/register', async (req, res) => {
     };
 
     inMemoryUsers.push(newUser);
-    console.log('Usuário cadastrado', newUser);
+    console.log('User registered:', newUser);
     res.status(201).json({ message: 'Usuário cadastrado!', user: newUser });
   } catch (error) {
-    console.error('Erro no registro:', error);
-    res.status(500).json({ message: 'Erro interno no servidor.' });
+    console.error('Error in register:', error);
+    res.status(500).json({ message: 'Erro interno no servidor.', details: error.message });
   }
 });
 
