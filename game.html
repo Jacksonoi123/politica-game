@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Política Game</title>
+  <link rel="icon" href="favicon.png" type="image/png">
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, Component } = React;
+
+    // URL da API ajustada para incluir o prefixo /api
+    const API_URL = 'https://politicagame.netlify.app/.netlify/functions/server';
+
+    class ErrorBoundary extends Component {
+      state = { hasError: false, errorMessage: '' };
+
+      static getDerivedStateFromError(error) {
+        return { hasError: true, errorMessage: 'Ocorreu um erro. Tente recarregar ou fazer login novamente.' };
+      }
+
+      componentDidCatch(error, errorInfo) {
+        console.error('Erro capturado:', error, errorInfo);
+      }
+
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+              <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+                <h1 className="text-2xl font-bold mb-4">Erro</h1>
+                <p>{this.state.errorMessage}</p>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('user');
+                    window.location.href = '/index.html';
+                  }}
+                  className="mt-4 py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Fazer Login Novamente
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-4 py-2 px-4 bg-green-500 text-white rounded hover:bg-green-600 ml-2"
+                >
+                  Recarregar
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    const NATIONS = ['Brasil', 'EUA', 'China', 'Rússia', 'França', 'Alemanha', 'Japão', 'Índia', 'Reino Unido', 'Canadá'];
+    const ELITE_ROLES = ['Ditador Supremo', 'Presidente', 'Primeiro-Ministro', 'Monarca', 'Ditador'];
+    const ROLE_PROGRESSION = {
+      'Imigrante Ilegal': { next: 'Imigrante', cost: 100 },
+      'Imigrante': { next: 'Cidadão Sem Direitos', cost: 200 },
+      'Cidadão Sem Direitos': { next: 'Cidadão', cost: 300 },
+      'Cidadão': { next: 'Eleitor Manipulado', cost: 400 },
+      'Eleitor Manipulado': { next: 'Militante de WhatsApp', cost: 500 },
+      'Militante de WhatsApp': { next: 'Influenciador', cost: 600 },
+      'Influenciador': { next: 'Influenciador Político', cost: 700 },
+      'Influenciador Político': { next: 'Candidato de Baixo Orçamento', cost: 800 },
+      'Candidato de Baixo Orçamento': { next: 'Prefeito de Bairro', cost: 900 },
+      'Prefeito de Bairro': { next: 'Prefeito de Bairro Corrupto', cost: 1000 },
+      'Prefeito de Bairro Corrupto': { next: 'Vice Prefeito', cost: 1200 },
+      'Vice Prefeito': { next: 'Vice Prefeito Corrupto', cost: 1400 },
+      'Vice Prefeito Corrupto': { next: 'Prefeito', cost: 1600 },
+      'Prefeito': { next: 'Prefeito Corrupto', cost: 1800 },
+      'Prefeito Corrupto': { next: 'Deputado Estadual', cost: 2000 },
+      'Deputado Estadual': { next: 'Deputado Estadual Corrupto', cost: 2200 },
+      'Deputado Estadual Corrupto': { next: 'Deputado Federal', cost: 2400 },
+      'Deputado Federal': { next: 'Deputado Federal Corrupto', cost: 2600 },
+      'Deputado Federal Corrupto': { next: 'Senador', cost: 2800 },
+      'Senador': { next: 'Senador Corrupto', cost: 3000 },
+      'Senador Corrupto': { next: 'Senador Vitalício', cost: 3200 },
+      'Senador Vitalício': { next: 'Senador Vitalício Corrupto', cost: 3400 },
+      'Senador Vitalício Corrupto': { next: 'Ministro Populista', cost: 3600 },
+      'Ministro Populista': { next: 'Ministro Questionável', cost: 3800 },
+      'Ministro Questionável': { next: 'Presidente Interino', cost: 4000 },
+      'Presidente Interino': { next: 'Presidente Interino Corrupto', cost: 4200 },
+      'Presidente Interino Corrupto': { next: 'Vice-Presidente', cost: 4400 },
+      'Vice-Presidente': { next: 'Vice-Presidente Corrupto', cost: 4600 },
+      'Vice-Presidente Corrupto': { next: 'Presidente', cost: 4800 },
+      'Presidente': { next: 'Presidente Corrupto', cost: 5000 },
+      'Presidente Corrupto': { next: 'Monarca', cost: 5200 },
+      'Monarca': { next: 'Ditador', cost: 5400 },
+      'Ditador': { next: 'Ditador Supremo', cost: 5600 }
+    };
+
+    function Game() {
+      const [user, setUser] = useState(null);
+      const [globalTop, setGlobalTop] = useState({});
+      const [news, setNews] = useState([]);
+      const [showPasswordPopup, setShowPasswordPopup] = useState(false);
+      const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+      const [showNationPopup, setShowNationPopup] = useState(false);
+      const [newPassword, setNewPassword] = useState('');
+      const [error, setError] = useState('');
+      const [insufficientCredit, setInsufficientCredit] = useState(false);
+      const [gameDate, setGameDate] = useState(() => {
+        const savedDate = localStorage.getItem('gameDate');
+        return savedDate ? JSON.parse(savedDate) : { year: 1989, month: 1, day: 1, lastUpdate: Date.now() };
+      });
+      const [startTime] = useState(Date.now());
+      const [selectedNation, setSelectedNation] = useState(null);
+      const [topPlayers, setTopPlayers] = useState([]); // Ranking local baseado em globalTop
+
+      useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser && storedUser.trim() !== '') {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            if (parsedUser && typeof parsedUser === 'object') {
+              if (!parsedUser.allies) parsedUser.allies = 0;
+              if (!parsedUser.reputation) parsedUser.reputation = 0;
+              if (!parsedUser.mediaControl) parsedUser.mediaControl = false;
+              if (!parsedUser.militaryControl) parsedUser.militaryControl = false;
+              setUser(parsedUser);
+              fetchGlobalTop(parsedUser.nation);
+              fetchNews(parsedUser.nation);
+              updateGameDate();
+            } else {
+              throw new Error('Dados de usuário inválidos');
+            }
+          } catch (e) {
+            console.error('Erro ao parsear usuário:', e);
+            setUser(null);
+            localStorage.removeItem('user');
+            window.location.href = '/index.html';
+          }
+        } else {
+          window.location.href = '/index.html';
+        }
+        const interval = setInterval(updateGameDate, 1000);
+        return () => clearInterval(interval);
+      }, []);
+
+      useEffect(() => {
+        // Sincronizar topPlayers com globalTop e incluir o usuário atual
+        if (Object.keys(globalTop).length > 0 && user) {
+          let players = [...globalTop.map(player => ({ name: player.name, score: player.score || 0 }))];
+          players = players.filter(p => p.name !== user.name); // Remove o usuário se já estiver
+          players.push({ name: user.name, score: user.score }); // Adiciona o usuário atual
+          players.sort((a, b) => b.score - a.score);
+          players = players.slice(0, 30); // Top 30
+          setTopPlayers(players);
+        }
+      }, [globalTop, user]);
+
+      const fetchGlobalTop = async (nation) => {
+        try {
+          const response = await fetch(`${API_URL}/global-top`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nation }),
+          });
+          const data = await response.json();
+          if (response.ok) {
+            const syncedTop = data.top.map(player => ({
+              ...player,
+              score: player.score || 0
+            }));
+            setGlobalTop(syncedTop || {});
+          } else {
+            console.error('Erro na resposta do global-top:', data.message);
+          }
+        } catch (err) {
+          console.error('Erro ao carregar top global:', err);
+        }
+      };
+
+      const fetchNews = async (nation) => {
+        try {
+          const response = await fetch(`${API_URL}/news/${nation}`);
+          const data = await response.json();
+          if (response.ok) setNews(data.news || []);
+          else console.error('Erro na resposta do news:', data.message);
+        } catch (err) {
+          console.error('Erro ao carregar notícias:', err);
+        }
+      };
+
+      const updateGameDate = () => {
+        const now = Date.now();
+        const savedDate = localStorage.getItem('gameDate') ? JSON.parse(localStorage.getItem('gameDate')) : { year: 1989, month: 1, day: 1, lastUpdate: Date.now() };
+        const elapsedMs = now - savedDate.lastUpdate;
+        const msPerDay = 1000;
+        const msPerMonth = 30000;
+        const msPerYear = 360000;
+
+        const totalDays = Math.floor(elapsedMs / msPerDay);
+        const totalMonths = Math.floor(elapsedMs / msPerMonth);
+        const totalYears = Math.floor(elapsedMs / msPerYear);
+
+        let year = savedDate.year + totalYears;
+        let month = savedDate.month + (totalMonths % 12);
+        let day = savedDate.day + (totalDays % 30);
+
+        if (day > 30) {
+          day = day % 30 || 30;
+          month += Math.floor(day / 30);
+        }
+        if (month > 12) {
+          month = month % 12 || 12;
+          year += Math.floor(month / 12);
+        }
+
+        const newDate = { year, month, day, lastUpdate: now };
+        setGameDate(newDate);
+        localStorage.setItem('gameDate', JSON.stringify(newDate));
+      };
+
+      const API_URL = 'https://politicagame.netlify.app/.netlify/functions/server';
+
+      const handleRegister = async (event) => {
+        event.preventDefault();
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const nation = document.getElementById('nation').value;
+
+        try {
+          const response = await fetch(`${API_URL}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password, nation }),
+          });
+          const data = await response.json();
+          if (response.ok) {
+            alert('Registro bem-sucedido! Faça login para continuar.');
+            window.location.href = '/index.html';
+          } else {
+            setError(data.message || 'Erro no registro.');
+            setTimeout(() => setError(''), 2000);
+          }
+        } catch (err) {
+          console.error('Erro no registro:', err);
+          setError('Erro no registro: ' + (err.message || 'Falha na conexão.'));
+          setTimeout(() => setError(''), 2000);
+        }
+      };
+
+      const addScore = async (points) => {
+        if (!user) return;
+        const lastScoreTime = localStorage.getItem('lastScoreTime');
+        const now = Date.now();
+        const cooldown = 5400000;
+        if (lastScoreTime && (now - lastScoreTime < cooldown)) {
+          setError('Você só pode ganhar pontos a cada 90 minutos!');
+          setTimeout(() => setError(''), 2000);
+          return;
+        }
+        try {
+          const response = await fetch(`${API_URL}/update-score`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: atob(user.email), score: points }),
+          });
+          const data = await response.json();
+          if (response.ok) {
+            setUser(data.user);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            fetchGlobalTop(user.nation);
+            localStorage.setItem('lastScoreTime', now);
+
+            // Atualizar topPlayers imediatamente com o novo score
+            let players = [...topPlayers];
+            players = players.filter(p => p.name !== data.user.name);
+            players.push({ name: data.user.name, score: data.user.score });
+            players.sort((a, b) => b.score - a.score);
+            players = players.slice(0, 30);
+            setTopPlayers(players);
+          } else console.error('Erro ao atualizar pontuação:', data.message);
+        } catch (err) {
+          console.error('Erro ao atualizar pontuação:', err);
+        }
+      };
+
+      const buyItem = async (itemCost, itemEffect) => {
+        if (user && user.score >= itemCost) {
+          try {
+            const updatedUser = {
+              ...user,
+              score: user.score - itemCost,
+              level: user.level + (itemEffect.level || 0),
+              allies: user.allies + (itemEffect.allies || 0),
+              reputation: user.reputation + (itemEffect.reputation || 0),
+              credits: user.credits + (itemEffect.credits || 0)
+            };
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            await fetch(`${API_URL}/update-score`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: atob(user.email), score: -itemCost }),
+            });
+            fetchGlobalTop(user.nation);
+
+            // Atualizar topPlayers imediatamente com o novo score
+            let players = [...topPlayers];
+            players = players.filter(p => p.name !== updatedUser.name);
+            players.push({ name: updatedUser.name, score: updatedUser.score });
+            players.sort((a, b) => b.score - a.score);
+            players = players.slice(0, 30);
+            setTopPlayers(players);
+          } catch (err) {
+            console.error('Erro ao comprar item');
+          }
+        } else {
+          setInsufficientCredit(true);
+          setTimeout(() => setInsufficientCredit(false), 3000);
+        }
+      };
+
+      const evolveRole = async () => {
+        if (!user || ELITE_ROLES.includes(user.role)) return;
+        const progression = ROLE_PROGRESSION[user.role];
+        if (!progression || user.score < progression.cost) {
+          setError(`Você precisa de ${progression ? progression.cost : 'mais pontos'} para evoluir!`);
+          setTimeout(() => setError(''), 2000);
+          return;
+        }
+        try {
+          const updatedUser = { ...user, role: progression.next, score: user.score - progression.cost, level: user.level + 1 };
+          setUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          await fetch(`${API_URL}/update-score`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: atob(user.email), score: -progression.cost }),
+          });
+          fetchGlobalTop(user.nation);
+
+          // Atualizar topPlayers imediatamente com o novo score
+          let players = [...topPlayers];
+          players = players.filter(p => p.name !== updatedUser.name);
+          players.push({ name: updatedUser.name, score: updatedUser.score });
+          players.sort((a, b) => b.score - a.score);
+          players = players.slice(0, 30);
+          setTopPlayers(players);
+        } catch (err) {
+          console.error('Erro ao evoluir cargo:', err);
+        }
+      };
+
+      const logout = () => {
+        localStorage.removeItem('user');
+        window.location.href = '/index.html';
+      };
+
+      const changeNation = () => {
+        setShowPasswordPopup(true);
+      };
+
+      const verifyPassword = () => {
+        if (newPassword === atob(user.password)) {
+          setShowPasswordPopup(false);
+          setShowConfirmPopup(true);
+        } else {
+          setError('Senha incorreta.');
+          setTimeout(() => setError(''), 2000);
+        }
+      };
+
+      const confirmNationChange = () => {
+        setShowConfirmPopup(false);
+        setShowNationPopup(true);
+      };
+
+      const selectNation = async (nation) => {
+        setSelectedNation(nation);
+        try {
+          const response = await fetch(`${API_URL}/change-nation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: atob(user.email), newNation: nation }),
+          });
+          const data = await response.json();
+          if (response.ok) {
+            localStorage.removeItem('user');
+            window.location.href = '/index.html';
+          } else setError(data.message);
+        } catch (err) {
+          console.error('Erro ao mudar nação');
+          setError('Erro ao mudar nação.');
+        }
+        setShowNationPopup(false);
+        setNewPassword('');
+      };
+
+      const openNews = () => {
+        window.location.href = '/news.html';
+      };
+
+      const openSkills = () => {
+        window.location.href = '/skills.html';
+      };
+
+      const openSettings = () => {
+        alert('Configurações abertas! (Funcionalidade a ser implementada) ⚙️');
+      };
+
+      const openCoup = () => {
+        if (user && ELITE_ROLES.includes(user.role)) {
+          setError('Cargos de elite não podem iniciar um golpe!');
+          setTimeout(() => setError(''), 2000);
+          return;
+        }
+        window.location.href = '/golpe.html';
+      };
+
+      const openTutorial = () => {
+        window.location.href = '/tutorial.html';
+      };
+
+      const openEconomy = () => {
+        window.location.href = '/economia.html';
+      };
+
+      const openWork = () => {
+        window.location.href = '/work.html';
+      };
+
+      if (!user) {
+        return (
+          <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+              <h1 className="text-2xl font-bold mb-4 text-center">Registro</h1>
+              <form onSubmit={handleRegister}>
+                <input id="name" type="text" placeholder="Nome" className="mt-1 p-2 w-full border rounded focus:outline-none focus:ring-2 focus:ring-blue-600" required />
+                <input id="email" type="email" placeholder="Email" className="mt-2 p-2 w-full border rounded focus:outline-none focus:ring-2 focus:ring-blue-600" required />
+                <input id="password" type="password" placeholder="Senha" className="mt-2 p-2 w-full border rounded focus:outline-none focus:ring-2 focus:ring-blue-600" required />
+                <select id="nation" className="mt-2 p-2 w-full border rounded focus:outline-none focus:ring-2 focus:ring-blue-600" required>
+                  {NATIONS.map(nation => <option key={nation} value={nation}>{nation} {getFlagEmoji(nation)}</option>)}
+                </select>
+                <button type="submit" className="mt-4 w-full py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Registrar</button>
+                <p className="mt-2 text-center">Já tem uma conta? <a href="/index.html" className="text-blue-500 hover:underline">Faça login</a></p>
+              </form>
+              {error && <p className="text-red-500 mt-2 text-center">{error}</p>}
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <ErrorBoundary>
+          <div className="min-h-screen bg-gray-100 flex">
+            <div className="w-1/4 bg-gray-200 p-4">
+              <h3 className="text-xl font-semibold mb-4">Conta 👤</h3>
+              <button onClick={openEconomy} className="w-full mb-2 py-2 bg-green-500 text-white rounded hover:bg-green-600">Economia 💰</button>
+              <button onClick={openWork} className="w-full mb-2 py-2 bg-orange-500 text-white rounded hover:bg-orange-600">Trabalho 💼</button>
+              <button onClick={openNews} className="w-full mb-2 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Notícias 📰</button>
+              <button onClick={openSkills} className="w-full mb-2 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">Skills 🎓</button>
+              <button onClick={changeNation} className="w-full mb-2 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">Mudar de País 🌍</button>
+              <button onClick={openSettings} className="w-full mb-2 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Configurações ⚙️</button>
+              {!user.tutorialCompleted && (
+                <button onClick={openTutorial} className="w-full mb-2 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">Tutorial 🎓</button>
+              )}
+              <button onClick={logout} className="w-full py-2 bg-red-500 text-white rounded hover:bg-red-600">Sair 🚪</button>
+            </div>
+
+            {showPasswordPopup && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white p-6 rounded-lg shadow-lg text-center w-96">
+                  <h3 className="text-xl font-semibold mb-4">Mudar de País</h3>
+                  <p className="mb-4">Digite sua senha para confirmar:</p>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="mt-1 p-2 w-full border rounded focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    placeholder="Senha"
+                  />
+                  {error && <p className="text-red-500 mt-2">{error}</p>}
+                  <div className="mt-4 flex justify-around">
+                    <button onClick={verifyPassword} className="py-2 px-4 bg-green-500 text-white rounded hover:bg-green-600">Confirmar ✅</button>
+                    <button onClick={() => { setShowPasswordPopup(false); setError(''); setNewPassword(''); }} className="py-2 px-4 bg-red-500 text-white rounded hover:bg-red-600">Cancelar ❌</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showConfirmPopup && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white p-6 rounded-lg shadow-lg text-center w-96">
+                  <h3 className="text-xl font-semibold mb-4">Confirmar Mudança</h3>
+                  <p className="mb-4">Deseja continuar e mudar de nação? Isso reiniciará seu progresso.</p>
+                  <div className="mt-4 flex justify-around">
+                    <button onClick={confirmNationChange} className="py-2 px-4 bg-green-500 text-white rounded hover:bg-green-600">Sim ✅</button>
+                    <button onClick={() => setShowConfirmPopup(false)} className="py-2 px-4 bg-red-500 text-white rounded hover:bg-red-600">Não ❌</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showNationPopup && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white p-6 rounded-lg shadow-lg text-center w-96">
+                  <h3 className="text-xl font-semibold mb-4">Escolha uma Nação</h3>
+                  {NATIONS.map(nation => (
+                    <button
+                      key={nation}
+                      onClick={() => selectNation(nation)}
+                      className="mt-2 w-full py-2 bg-gray-200 rounded hover:bg-gray-300"
+                    >
+                      {nation} {getFlagEmoji(nation)}
+                    </button>
+                  ))}
+                  <button onClick={() => setShowNationPopup(false)} className="mt-4 py-2 px-4 bg-red-500 text-white rounded hover:bg-red-600">Cancelar ❌</button>
+                </div>
+              </div>
+            )}
+
+            <div className="w-2/4 p-8 text-center">
+              <h1 className="text-3xl font-bold mb-4">Política Game</h1>
+              <p>Data do Jogo: {`${gameDate.day}/${gameDate.month}/${gameDate.year}`}</p>
+              <p>Nome: {user.name} 👤</p>
+              <p>Nação: {user.nation} {getFlagEmoji(user.nation)}</p>
+              <p>Cargo: {user.role} Lvl {user.level} 🎩</p>
+              <p>Nível: {user.level} 📊</p>
+              <p>Créditos: {user.credits} 💰</p>
+              <p>Pontos: {user.score} ⭐</p>
+              <p>Reputação: {user.reputation} 🌟</p>
+              <p>Aliados: {user.allies} 🤝</p>
+              <button
+                className="mt-4 w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600"
+                onClick={() => addScore(50)}
+              >
+                Ganhar 50 Pontos 🎯
+              </button>
+
+              <div className="mt-4">
+                <h3 className="text-xl font-semibold">Loja 🏬</h3>
+                <button onClick={() => buyItem(50, { allies: 1, level: 1 })} className="mt-2 w-full py-2 bg-green-500 text-white rounded hover:bg-green-600">Aliado (50⭐)</button>
+                <button onClick={() => buyItem(100, { reputation: 20, level: 1 })} className="mt-2 w-full py-2 bg-green-500 text-white rounded hover:bg-green-600">Reputação (100⭐)</button>
+                <button onClick={() => buyItem(200, { credits: 50, level: 1 })} className="mt-2 w-full py-2 bg-green-500 text-white rounded hover:bg-green-600">Créditos (200⭐)</button>
+              </div>
+
+              <div className="mt-4">
+                <h3 className="text-xl font-semibold">Evoluir 📈</h3>
+                <button
+                  onClick={evolveRole}
+                  className="w-full py-2 px-4 bg-purple-500 text-white rounded hover:bg-purple-600"
+                  disabled={!ROLE_PROGRESSION[user.role] || ELITE_ROLES.includes(user.role)}
+                >
+                  Evoluir para {ROLE_PROGRESSION[user.role]?.next || 'Cargo Máximo'} ({ROLE_PROGRESSION[user.role]?.cost || 0}⭐)
+                </button>
+              </div>
+
+              <button
+                onClick={openCoup}
+                className={`mt-4 w-full py-2 px-4 ${ELITE_ROLES.includes(user.role) ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600'} text-white rounded`}
+                disabled={ELITE_ROLES.includes(user.role)}
+              >
+                Golpe de Estado 💣
+              </button>
+            </div>
+            <div className="w-1/4 bg-gray-200 p-4">
+              <h3 className="text-xl font-semibold mb-4">Top 30 {user.nation} 🏆</h3>
+              {topPlayers.length > 0 ? (
+                topPlayers.map((player, index) => (
+                  index < 30 && <p key={index}>{index + 1}º: {player.name} - {player.score}⭐</p>
+                ))
+              ) : (
+                <p>Carregando... ⏳</p>
+              )}
+            </div>
+
+            {insufficientCredit && (
+              <div className="fixed bottom-4 right-4 bg-red-500 text-white p-2 rounded shadow-lg">
+                Pontos insuficientes! ⭐
+              </div>
+            )}
+            {error && (
+              <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white p-2 rounded shadow-lg">
+                {error}
+              </div>
+            )}
+          </div>
+        </ErrorBoundary>
+      );
+    }
+
+    function getFlagEmoji(nation) {
+      const flags = {
+        'Brasil': '🇧🇷', 'EUA': '🇺🇸', 'China': '🇨🇳', 'Rússia': '🇷🇺',
+        'França': '🇫🇷', 'Alemanha': '🇩🇪', 'Japão': '🇯🇵', 'Índia': '🇮🇳',
+        'Reino Unido': '🇬🇧', 'Canadá': '🇨🇦'
+      };
+      return flags[nation] || '';
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<Game />);
+  </script>
+</body>
+</html>

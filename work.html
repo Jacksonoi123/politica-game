@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trabalho - Política Game</title>
+  <link rel="icon" href="favicon.png" type="image/png">
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, Component } = React;
+
+    const WORK_DATA = {
+      'Imigrante Ilegal': [
+        { name: 'Trabalhar como ajudante clandestino na construção', time: 2, reward: 10, eventChance: 0.3 },
+        { name: 'Sobreviver a blitz migratória', time: 3, reward: 25, eventChance: 0.2 },
+        { name: 'Conectar-se a rede de apoio informal', time: 4, reward: 50, eventChance: 0.1 }
+      ],
+      'Imigrante': [
+        { name: 'Obter documentos falsos', time: 3, reward: 30, eventChance: 0.25 },
+        { name: 'Trabalhar como entregador com salário mínimo', time: 2, reward: 45, eventChance: 0.2 },
+        { name: 'Participar de comício sem ser notado', time: 4, reward: 60, eventChance: 0.15 }
+      ],
+      'Cidadão Sem Direitos': [
+        { name: 'Entrar em protesto sem repercussão', time: 3, reward: 40, eventChance: 0.2 },
+        { name: 'Fazer denúncia que será ignorada', time: 2, reward: 55, eventChance: 0.25 },
+        { name: 'Sobreviver à fila do SUS', time: 4, reward: 70, eventChance: 0.1 }
+      ],
+      'Cidadão': [
+        { name: 'Votar com esperança', time: 2, reward: 50, eventChance: 0.15 },
+        { name: 'Reclamar nas redes sociais', time: 3, reward: 65, eventChance: 0.2 },
+        { name: 'Participar de audiência pública', time: 4, reward: 80, eventChance: 0.1 }
+      ],
+      'Eleitor Manipulado': [
+        { name: 'Compartilhar fake news com convicção', time: 2, reward: 50, eventChance: 0.3 },
+        { name: 'Defender político corrupto online', time: 3, reward: 65, eventChance: 0.25 },
+        { name: 'Ignorar debates', time: 2, reward: 40, eventChance: 0.2 }
+      ],
+      'Militante de WhatsApp': [
+        { name: 'Criar corrente de áudio com mentiras', time: 3, reward: 60, eventChance: 0.3 },
+        { name: 'Invadir grupos com propaganda', time: 2, reward: 45, eventChance: 0.25 },
+        { name: 'Derrubar notícia verdadeira', time: 3, reward: 55, eventChance: 0.2 }
+      ],
+      'Influenciador': [
+        { name: 'Postar foto apoiando candidato sem contexto', time: 2, reward: 50, eventChance: 0.2 },
+        { name: 'Ganhar seguidores por polêmica', time: 3, reward: 65, eventChance: 0.25 },
+        { name: 'Lançar produto político que ninguém entende', time: 4, reward: 80, eventChance: 0.15 }
+      ],
+      'Influenciador Político': [
+        { name: 'Criar live com discurso emocional', time: 3, reward: 70, eventChance: 0.2 },
+        { name: 'Cancelar adversário com memes', time: 2, reward: 55, eventChance: 0.25 },
+        { name: 'Criar hashtag viral', time: 3, reward: 65, eventChance: 0.2 }
+      ],
+      'Candidato de Baixo Orçamento': [
+        { name: 'Visitar periferia com discurso engajado', time: 3, reward: 60, eventChance: 0.2 },
+        { name: 'Distribuir santinhos sem dinheiro', time: 2, reward: 45, eventChance: 0.25 },
+        { name: 'Participar de debate sem preparação', time: 4, reward: 70, eventChance: 0.15 }
+      ],
+      'Prefeito de Bairro Corrupto': [
+        { name: 'Aprovar obra superfaturada', time: 4, reward: 80, eventChance: 0.3 },
+        { name: 'Favorecer empresa fantasma local', time: 3, reward: 65, eventChance: 0.25 },
+        { name: 'Ignorar auditoria pública', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Prefeito de Bairro': [
+        { name: 'Criar campanha de reciclagem', time: 3, reward: 60, eventChance: 0.15 },
+        { name: 'Organizar festa comunitária', time: 2, reward: 45, eventChance: 0.2 },
+        { name: 'Atender cidadão no gabinete', time: 4, reward: 70, eventChance: 0.1 }
+      ],
+      'Tesoureiro de Campanha Corrupto': [
+        { name: 'Manipular planilhas', time: 3, reward: 65, eventChance: 0.3 },
+        { name: 'Enviar verba para offshore', time: 4, reward: 80, eventChance: 0.25 },
+        { name: 'Comprar silêncio de funcionário', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Tesoureiro de Campanha': [
+        { name: 'Organizar prestação de contas', time: 3, reward: 60, eventChance: 0.15 },
+        { name: 'Cortar gastos desnecessários', time: 2, reward: 45, eventChance: 0.2 },
+        { name: 'Criar sistema de controle financeiro', time: 4, reward: 70, eventChance: 0.1 }
+      ],
+      'Diretor Executivo de Gabinete': [
+        { name: 'Demitir assessor inútil', time: 2, reward: 50, eventChance: 0.2 },
+        { name: 'Criar plano emergencial', time: 3, reward: 65, eventChance: 0.15 },
+        { name: 'Agendar reunião pra nada', time: 2, reward: 40, eventChance: 0.25 }
+      ],
+      'Diretor Executivo': [
+        { name: 'Assinar contratos com impacto real', time: 4, reward: 80, eventChance: 0.1 },
+        { name: 'Negociar verba com empresários', time: 3, reward: 65, eventChance: 0.2 },
+        { name: 'Ignorar pequenos escândalos', time: 2, reward: 50, eventChance: 0.25 }
+      ],
+      'Vereador Fantasma': [
+        { name: 'Ausentar-se de 100% das sessões', time: 2, reward: 40, eventChance: 0.3 },
+        { name: 'Receber verba indevida', time: 3, reward: 55, eventChance: 0.25 },
+        { name: 'Votar sem saber no que', time: 2, reward: 45, eventChance: 0.2 }
+      ],
+      'Vereador Popular': [
+        { name: 'Criar projeto social verdadeiro', time: 4, reward: 70, eventChance: 0.1 },
+        { name: 'Organizar visita às escolas', time: 3, reward: 60, eventChance: 0.15 },
+        { name: 'Defender pauta comunitária', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Vice Prefeito Corrupto': [
+        { name: 'Articular queda do prefeito', time: 4, reward: 80, eventChance: 0.3 },
+        { name: 'Criar gabinete paralelo', time: 3, reward: 65, eventChance: 0.25 },
+        { name: 'Desviar verba de eventos', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Vice Prefeito': [
+        { name: 'Substituir prefeito em evento oficial', time: 3, reward: 60, eventChance: 0.15 },
+        { name: 'Criar programa de esporte', time: 2, reward: 45, eventChance: 0.2 },
+        { name: 'Ajudar em crise hídrica', time: 4, reward: 70, eventChance: 0.1 }
+      ],
+      'Prefeito': [
+        { name: 'Lançar plano de mobilidade urbana', time: 4, reward: 80, eventChance: 0.1 },
+        { name: 'Reabrir hospital fechado', time: 3, reward: 65, eventChance: 0.15 },
+        { name: 'Reunião com governador', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Prefeito Corrupto': [
+        { name: 'Contratar empresa da família', time: 3, reward: 65, eventChance: 0.3 },
+        { name: 'Proteger aliados em escândalos', time: 2, reward: 50, eventChance: 0.25 },
+        { name: 'Alterar licitação', time: 4, reward: 70, eventChance: 0.2 }
+      ],
+      'Deputado Estadual Corrupto': [
+        { name: 'Vender voto por emenda', time: 3, reward: 65, eventChance: 0.3 },
+        { name: 'Beneficiar empresário aliado', time: 2, reward: 50, eventChance: 0.25 },
+        { name: 'Criar comissão fantasma', time: 4, reward: 70, eventChance: 0.2 }
+      ],
+      'Deputado Estadual': [
+        { name: 'Propor lei regional de impacto', time: 4, reward: 80, eventChance: 0.1 },
+        { name: 'Intermediar demandas municipais', time: 3, reward: 60, eventChance: 0.15 },
+        { name: 'Votar com base em estudos', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Deputado Federal Corrupto': [
+        { name: 'Apoiar pauta com dinheiro do lobby', time: 4, reward: 80, eventChance: 0.3 },
+        { name: 'Blindar ministros corruptos', time: 3, reward: 65, eventChance: 0.25 },
+        { name: 'Viajar sem prestar contas', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Deputado Federal': [
+        { name: 'Participar de reforma constitucional', time: 4, reward: 80, eventChance: 0.1 },
+        { name: 'Aprovar lei de transparência', time: 3, reward: 65, eventChance: 0.15 },
+        { name: 'Dialogar com base diversa', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Senador Corrupto': [
+        { name: 'Manipular CPI por interesse', time: 4, reward: 80, eventChance: 0.3 },
+        { name: 'Travar pauta em troca de favores', time: 3, reward: 65, eventChance: 0.25 },
+        { name: 'Criar escândalo para desviar atenção', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Senador': [
+        { name: 'Defender instituições em crise', time: 4, reward: 80, eventChance: 0.1 },
+        { name: 'Mediar conflitos partidários', time: 3, reward: 65, eventChance: 0.15 },
+        { name: 'Propor emenda ética', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Senador Vitalício Corrupto': [
+        { name: 'Controlar indicações judiciais', time: 4, reward: 80, eventChance: 0.3 },
+        { name: 'Nomear aliados eternos', time: 3, reward: 65, eventChance: 0.25 },
+        { name: 'Votar leis que beneficiam grupo próprio', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Senador Vitalício': [
+        { name: 'Reformar constituição com legitimidade', time: 4, reward: 80, eventChance: 0.1 },
+        { name: 'Fiscalizar Executivo com isenção', time: 3, reward: 65, eventChance: 0.15 },
+        { name: 'Criar escola de formação política', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Ministro Questionável': [
+        { name: 'Aprovar projeto suspeito com propaganda', time: 4, reward: 80, eventChance: 0.3 },
+        { name: 'Criar campanha contraditória', time: 3, reward: 65, eventChance: 0.25 },
+        { name: 'Prometer e não entregar', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Ministro Populista': [
+        { name: 'Lançar bolsa-relâmpago', time: 3, reward: 70, eventChance: 0.2 },
+        { name: 'Criar evento de massa', time: 2, reward: 55, eventChance: 0.25 },
+        { name: 'Atacar opositor em rede nacional', time: 3, reward: 65, eventChance: 0.2 }
+      ],
+      'Presidente Interino Corrupto': [
+        { name: 'Assinar decreto de urgência sem sentido', time: 4, reward: 80, eventChance: 0.3 },
+        { name: 'Favorecer empresa amiga em contrato', time: 3, reward: 65, eventChance: 0.25 },
+        { name: 'Cancelar investigação em andamento', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Presidente Interino': [
+        { name: 'Convocar conselho nacional', time: 4, reward: 80, eventChance: 0.1 },
+        { name: 'Lançar plano emergencial verdadeiro', time: 3, reward: 65, eventChance: 0.15 },
+        { name: 'Moderar crise institucional', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Vice-Presidente Corrupto': [
+        { name: 'Articular impeachment informal', time: 4, reward: 80, eventChance: 0.3 },
+        { name: 'Distribuir cargos para aliados', time: 3, reward: 65, eventChance: 0.25 },
+        { name: 'Vazar informação estratégica', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Vice-Presidente': [
+        { name: 'Representar país em reunião global', time: 4, reward: 80, eventChance: 0.1 },
+        { name: 'Criar projeto de integração regional', time: 3, reward: 65, eventChance: 0.15 },
+        { name: 'Apoiar presidente em decisões difíceis', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Presidente Corrupto': [
+        { name: 'Manipular dados econômicos', time: 4, reward: 80, eventChance: 0.3 },
+        { name: 'Roubo ao INSS', time: 3, reward: 65, eventChance: 0.25 },
+        { name: 'Barrar CPIs com influência', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Presidente': [
+        { name: 'Aprovar plano nacional de educação', time: 4, reward: 80, eventChance: 0.1 },
+        { name: 'Firmar tratado internacional', time: 3, reward: 65, eventChance: 0.15 },
+        { name: 'Realizar discurso histórico', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Monarca': [
+        { name: 'Criar feriado real', time: 3, reward: 70, eventChance: 0.2 },
+        { name: 'Manter neutralidade política', time: 2, reward: 55, eventChance: 0.15 },
+        { name: 'Inspirar artistas e intelectuais', time: 4, reward: 80, eventChance: 0.1 }
+      ],
+      'Ditador': [
+        { name: 'Dissolver o congresso', time: 4, reward: 80, eventChance: 0.3 },
+        { name: 'Militarizar fronteiras', time: 3, reward: 65, eventChance: 0.25 },
+        { name: 'Proibir eleições', time: 2, reward: 50, eventChance: 0.2 }
+      ],
+      'Ditador Supremo': [
+        { name: 'Controlar vários países simultaneamente', time: 5, reward: 100, eventChance: 0.3 },
+        { name: 'Instaurar culto à personalidade', time: 4, reward: 85, eventChance: 0.25 },
+        { name: 'Apagar oposição digitalmente', time: 3, reward: 70, eventChance: 0.2 }
+      ]
+    };
+
+    class ErrorBoundary extends Component {
+      state = { hasError: false, errorMessage: '' };
+
+      static getDerivedStateFromError(error) {
+        return { hasError: true, errorMessage: 'Ocorreu um erro. Tente recarregar ou fazer login novamente.' };
+      }
+
+      componentDidCatch(error, errorInfo) {
+        console.error('Erro capturado:', error, errorInfo);
+      }
+
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+              <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+                <h1 className="text-2xl font-bold mb-4">Erro</h1>
+                <p>{this.state.errorMessage}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-4 py-2 px-4 bg-green-500 text-white rounded hover:bg-green-600"
+                >
+                  Recarregar
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    function Work() {
+      const [user, setUser] = useState(null);
+      const [activeWorks, setActiveWorks] = useState({});
+      const [gameDate, setGameDate] = useState(() => {
+        const savedDate = localStorage.getItem('gameDate');
+        return savedDate ? JSON.parse(savedDate) : { year: 1989, month: 1, day: 1, lastUpdate: Date.now() };
+      });
+      const [workLocks, setWorkLocks] = useState(() => {
+        const savedLocks = localStorage.getItem('workLocks');
+        return savedLocks ? JSON.parse(savedLocks) : {};
+      });
+      const [workProgress, setWorkProgress] = useState({});
+      const [error, setError] = useState('');
+
+      useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser && storedUser.trim() !== '') {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            if (parsedUser && typeof parsedUser === 'object') {
+              setUser(parsedUser);
+            } else {
+              const defaultUser = {
+                name: 'Teste',
+                nation: 'Brasil',
+                role: 'Cidadão',
+                level: 1,
+                credits: 1000,
+                score: 0,
+                reputation: 50,
+                allies: 0
+              };
+              setUser(defaultUser);
+              localStorage.setItem('user', JSON.stringify(defaultUser));
+            }
+          } catch (e) {
+            console.error('Erro ao parsear usuário:', e);
+            const defaultUser = {
+              name: 'Teste',
+              nation: 'Brasil',
+              role: 'Cidadão',
+              level: 1,
+              credits: 1000,
+              score: 0,
+              reputation: 50,
+              allies: 0
+            };
+            setUser(defaultUser);
+            localStorage.setItem('user', JSON.stringify(defaultUser));
+          }
+        } else {
+          const defaultUser = {
+            name: 'Teste',
+            nation: 'Brasil',
+            role: 'Cidadão',
+            level: 1,
+            credits: 1000,
+            score: 0,
+            reputation: 50,
+            allies: 0
+          };
+          setUser(defaultUser);
+          localStorage.setItem('user', JSON.stringify(defaultUser));
+        }
+        const savedWorks = JSON.parse(localStorage.getItem('activeWorks') || '{}');
+        setActiveWorks(savedWorks);
+        updateGameDate();
+      }, []);
+
+      const updateGameDate = () => {
+        const now = Date.now();
+        const savedDate = localStorage.getItem('gameDate') ? JSON.parse(localStorage.getItem('gameDate')) : { year: 1989, month: 1, day: 1, lastUpdate: Date.now() };
+        const elapsedMs = now - savedDate.lastUpdate;
+        const msPerDay = 2500; // 2.5 segundos = 1 dia fictício
+        const msPerMonth = 75000;
+        const msPerYear = 900000;
+
+        const totalDays = Math.floor(elapsedMs / msPerDay);
+        const totalMonths = Math.floor(elapsedMs / msPerMonth);
+        const totalYears = Math.floor(elapsedMs / msPerYear);
+
+        let year = savedDate.year + totalYears;
+        let month = savedDate.month + (totalMonths % 12);
+        let day = savedDate.day + (totalDays % 30);
+
+        if (day > 30) {
+          day = day % 30 || 30;
+          month += Math.floor(day / 30);
+        }
+        if (month > 12) {
+          month = month % 12 || 12;
+          year += Math.floor(month / 12);
+        }
+
+        const newDate = { year, month, day, lastUpdate: now };
+        setGameDate(newDate);
+        localStorage.setItem('gameDate', JSON.stringify(newDate));
+      };
+
+      const iniciarTrabalho = (workName) => {
+        if (!user) return;
+        const works = WORK_DATA[user.role];
+        const work = works.find(w => w.name === workName);
+        if (!work) {
+          setError('Trabalho não disponível para seu cargo!');
+          setTimeout(() => setError(''), 2000);
+          return;
+        }
+        const savedWorks = JSON.parse(localStorage.getItem('activeWorks') || '{}');
+        if (!savedWorks[workName] || !activeWorks[workName]) {
+          savedWorks[workName] = { startTime: Date.now(), duration: work.time };
+          localStorage.setItem('activeWorks', JSON.stringify(savedWorks));
+          setActiveWorks(savedWorks);
+          setWorkProgress({ ...workProgress, [workName]: 1 });
+          setError(`Trabalho "${workName}" iniciado!`);
+          setTimeout(() => setError(''), 2000);
+        }
+      };
+
+      const updateWorkProgress = (workName, duration, reward) => {
+        const now = Date.now();
+        const work = activeWorks[workName];
+        if (work) {
+          const elapsedMs = now - work.startTime;
+          const elapsedDays = Math.floor(elapsedMs / 2500); // 2.5s = 1 dia fictício
+          const currentDay = elapsedDays + 1;
+
+          if (currentDay <= duration) {
+            setWorkProgress({ ...workProgress, [workName]: currentDay });
+          } else {
+            let scoreChange = reward;
+            const sorte = Math.random();
+            if (sorte < 0.2) {
+              scoreChange -= 5;
+              setError('📰 Escândalo revelado! Você perdeu 5 pontos.');
+            } else if (sorte > 0.9) {
+              scoreChange += 10;
+              setError('🏆 Reconhecimento público! Ganhou 10 pontos extras.');
+            } else {
+              setError(`Trabalho "${workName}" concluído! +${reward} pontos.`);
+            }
+            setTimeout(() => setError(''), 2000);
+
+            const updatedUser = { ...user, score: Number((user.score + scoreChange).toFixed(2)) };
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser)); // Atualiza o score no banco de dados do usuário
+
+            // Bloqueio específico por trabalho
+            const diasBloqueio = duration === 3 ? 7 : duration === 4 ? 10 : 14;
+            const lockDuration = diasBloqueio * 2500;
+            setWorkLocks(prev => {
+              const newLocks = { ...prev, [workName]: now + lockDuration };
+              localStorage.setItem('workLocks', JSON.stringify(newLocks));
+              return newLocks;
+            });
+
+            const updatedWorks = { ...activeWorks };
+            delete updatedWorks[workName];
+            localStorage.setItem('activeWorks', JSON.stringify(updatedWorks));
+            setActiveWorks(updatedWorks);
+            setWorkProgress({ ...workProgress, [workName]: null });
+          }
+        }
+      };
+
+      useEffect(() => {
+        const interval = setInterval(() => {
+          updateGameDate();
+          Object.keys(activeWorks).forEach(workName => {
+            const work = WORK_DATA[user?.role].find(w => w.name === workName);
+            if (work) {
+              updateWorkProgress(workName, work.time, work.reward);
+            }
+          });
+        }, 100); // Atualiza a cada 100ms para precisão
+        return () => clearInterval(interval);
+      }, [activeWorks, user]);
+
+      if (!user) return <div>Carregando... ⏳</div>;
+
+      const works = WORK_DATA[user.role] || [];
+      return (
+        <ErrorBoundary>
+          <div className="min-h-screen bg-gray-100 p-4">
+            <div className="bg-white p-4 mb-4 rounded-lg shadow">
+              <p>Data do Jogo: {`${gameDate.day}/${gameDate.month}/${gameDate.year}`}</p>
+              <p>Nome: {user.name} 👤</p>
+              <p>Créditos: {user.credits != null ? Number(user.credits.toFixed(2)) : 0} 💰</p>
+              <p>Pontos: {user.score != null ? Number(user.score.toFixed(2)) : 0} ⭐</p>
+            </div>
+            <h1 className="text-3xl font-bold mb-4 text-center">Trabalhos - {user.role}</h1>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {works.map((work, index) => (
+                <div key={index} className="work-card p-4 bg-white rounded-lg shadow">
+                  <h3 className="text-lg font-semibold">{work.name}</h3>
+                  <p>Duração: {work.time} dias fictícios</p>
+                  <p>Recompensa: +{work.reward} Pontos</p>
+                  <button
+                    onClick={() => iniciarTrabalho(work.name)}
+                    className="mt-2 py-2 px-4 bg-green-500 text-white rounded hover:bg-green-600"
+                    disabled={activeWorks[work.name] || (workLocks[work.name] && Date.now() < workLocks[work.name])}
+                  >
+                    {activeWorks[work.name] ? `Dia ${workProgress[work.name] || 1}` : 'Iniciar'}
+                  </button>
+                </div>
+              ))}
+            </div>
+            {error && <p className="text-center mt-4 text-red-500">{error}</p>}
+            <button
+              onClick={() => window.location.href = '/game.html'}
+              className="mt-4 py-2 px-4 bg-gray-500 text-white rounded hover:bg-gray-600"
+            >
+              Voltar
+            </button>
+          </div>
+        </ErrorBoundary>
+      );
+    }
+
+    
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<Work />);
+  </script>
+</body>
+</html>

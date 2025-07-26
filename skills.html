@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skills - Política Game</title>
+  <link rel="icon" href="favicon.png" type="image/png">
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function Skills() {
+      const [user, setUser] = useState(null);
+      const [error, setError] = useState('');
+
+      useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          if (!parsedUser.allies) parsedUser.allies = 0;
+          if (!parsedUser.reputation) parsedUser.reputation = 0;
+          if (!parsedUser.mediaControl) parsedUser.mediaControl = false;
+          if (!parsedUser.militaryControl) parsedUser.militaryControl = false;
+          if (!parsedUser.skillLevels) parsedUser.skillLevels = {};
+          setUser(parsedUser);
+        } else {
+          window.location.href = '/index.html';
+        }
+      }, []);
+
+      const updateUser = (updatedUser) => {
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      };
+
+      const calculateSkillCost = (skill, currentLevel) => {
+        const baseCost = skillCosts[skill].cost;
+        if (currentLevel >= 100) return Infinity; // Limite máximo de nível 100
+        return baseCost * (1 + currentLevel * 0.1); // Custo aumenta 10% por nível
+      };
+
+      const useSkill = (skill, effect, baseCost, requiredLevel) => {
+        if (!user) return;
+        if (user.level < requiredLevel) {
+          setError(`Nível ${requiredLevel} necessário para usar ${skill}!`);
+          setTimeout(() => setError(''), 2000);
+          return;
+        }
+        const currentLevel = user.skillLevels[skill] || 0;
+        const currentCost = Math.ceil(calculateSkillCost(skill, currentLevel));
+        if (user.score < currentCost) {
+          setError(`Você precisa de ${currentCost} pontos para usar ${skill}!`);
+          setTimeout(() => setError(''), 2000);
+          return;
+        }
+        const updatedSkillLevels = { ...user.skillLevels, [skill]: currentLevel + 1 };
+        const updatedUser = { ...user, ...effect(user), score: user.score - currentCost, skillLevels: updatedSkillLevels };
+        updateUser(updatedUser);
+        setError(`Skill ${skill} usada! Nível atual: ${currentLevel + 1}, Custo: ${currentCost}`);
+        setTimeout(() => setError(''), 2000);
+      };
+
+      if (!user) return <div>Carregando... ⏳</div>;
+
+      const skillEffects = {
+        'Sobrevivência Urbana': (u) => ({ reputation: u.reputation + 10, allies: u.allies + 1 }),
+        'Trabalho Oculto': (u) => ({ credits: u.credits + 15 }),
+        'Disfarce Improvisado': (u) => ({ reputation: u.reputation + 5 }),
+        'Rede Subterrânea': (u) => ({ allies: u.allies + 2, reputation: u.reputation + 10 }),
+        'Coragem Invisível': (u) => ({ reputation: u.reputation + 15 }),
+        'Emprego Temporário': (u) => ({ credits: u.credits + 20, allies: u.allies + 1 }),
+        'Aprendizado Cultural': (u) => ({ reputation: u.reputation + 15 }),
+        'Documentação Parcial': (u) => ({ reputation: u.reputation + 10 }),
+        'Senso de Comunidade': (u) => ({ allies: u.allies + 2, reputation: u.reputation + 10 }),
+        'Ambição Silenciosa': (u) => ({ reputation: u.reputation + 20 }),
+        'Voz Ignorada': (u) => ({ reputation: u.reputation + 5, allies: u.allies + 1 }),
+        'Contribuinte Invisível': (u) => ({ credits: u.credits + 10 }),
+        'Desobediência Silenciosa': (u) => ({ reputation: u.reputation + 10, allies: u.allies + 2 }),
+        'Observador Indignado': (u) => ({ reputation: u.reputation + 5 }),
+        'Direito de Voto': (u) => ({ reputation: u.reputation + 10 }),
+        'Reclamação Formal': (u) => ({ reputation: u.reputation + 5, credits: u.credits - 5 }),
+        'Trabalho Formal': (u) => ({ credits: u.credits + 20, reputation: u.reputation - 5 }),
+        'Rede de Influência Local': (u) => ({ allies: u.allies + 3, reputation: u.reputation + 10 }),
+        'Compartilhamento em Massa': (u) => ({ reputation: u.reputation + 15, allies: u.allies + 1 }),
+        'Voto Emocional': (u) => ({ reputation: u.reputation + 20 }),
+        'Anti-fato': (u) => ({ reputation: u.reputation + 10 }),
+        'Engajamento Involuntário': (u) => ({ reputation: u.reputation + 5, allies: u.allies + 1 }),
+        'Enxurrada de Correntes': (u) => ({ reputation: u.reputation + 20, allies: u.allies + 2 }),
+        'Defesa de Grupo': (u) => ({ reputation: u.reputation + 15, allies: u.allies > 0 ? 2 : 0 }),
+        'Reação Instantânea': (u) => ({ reputation: u.reputation + 10 }),
+        'Censura Caseira': (u) => ({ reputation: u.reputation + 15, allies: u.allies + 1 }),
+        'Aumento de Visibilidade': (u) => ({ reputation: u.reputation + 30, allies: u.allies + 3 }),
+        'Live Estratégica': (u) => ({ reputation: u.reputation + 25, credits: u.credits + 50 }),
+        'Parcerias Comerciais': (u) => ({ credits: u.credits + 100 }),
+        'Cancelamento Reverso': (u) => ({ reputation: u.reputation + 20 }),
+        'Manipulação de Narrativa': (u) => ({ reputation: u.reputation + 40, mediaControl: true }),
+        'Discurso Programado': (u) => ({ reputation: u.reputation + 35, allies: u.allies + 2 }),
+        'Bot Farm': (u) => ({ reputation: u.reputation + 30, allies: u.allies + 3 }),
+        'Ataques Coordinados': (u) => ({ reputation: u.reputation + 25, allies: u.allies + 2 }),
+        'Promessa Impossível': (u) => ({ reputation: u.reputation + 30, allies: u.allies + 2 }),
+        'Campanha Porta a Porta': (u) => ({ reputation: u.reputation + 25, allies: u.allies + 3 }),
+        'Caixa Zerado': (u) => ({ credits: u.credits + 10 }),
+        'Resistência Política': (u) => ({ reputation: u.reputation + 20 }),
+        'Desvio de Verba': (u) => ({ credits: u.credits + 50, reputation: u.reputation - 10 }),
+        'Apadrinhamento Local': (u) => ({ allies: u.allies + 4, reputation: u.reputation + 10 }),
+        'Fake Transparência': (u) => ({ reputation: u.reputation + 20 }),
+        'Negociação de Licitações': (u) => ({ credits: u.credits + 75, reputation: u.reputation - 15 }),
+        'Gestão Comunitária': (u) => ({ reputation: u.reputation + 20, allies: u.allies + 2 }),
+        'Fiscalização Selectiva': (u) => ({ reputation: u.reputation + 15 }),
+        'Evento de Praça': (u) => ({ reputation: u.reputation + 25, allies: u.allies + 1 }),
+        'Aliança de Vizinhança': (u) => ({ allies: u.allies + 3, reputation: u.reputation + 10 }),
+        'Caixa 2 Profissional': (u) => ({ credits: u.credits + 100, reputation: u.reputation - 20 }),
+        'Lavagem Criativa': (u) => ({ credits: u.credits + 75, reputation: u.reputation - 15 }),
+        'Colaborador Fantasma': (u) => ({ allies: u.allies + 2, reputation: u.reputation - 10 }),
+        'Silenciamento de Testemunhas': (u) => ({ reputation: u.reputation + 10 }),
+        'Gestão de Fundos Oficiais': (u) => ({ reputation: u.reputation + 20 }),
+        'Contabilidade Transparente': (u) => ({ reputation: u.reputation + 15 }),
+        'Corte de Gastos': (u) => ({ credits: u.credits + 30 }),
+        'Incentivo Legal': (u) => ({ reputation: u.reputation + 20, credits: u.credits + 10 }),
+        'Coordenação de Ações': (u) => ({ allies: u.allies + 3, reputation: u.reputation + 15 }),
+        'Controle de Crise': (u) => ({ reputation: u.reputation + 20 }),
+        'Nomeação Estratégica': (u) => ({ allies: u.allies + 2, reputation: u.reputation + 10 }),
+        'Operação Burocrática': (u) => ({ reputation: u.reputation + 15 }),
+        'Gestão Orçamentária': (u) => ({ credits: u.credits + 50, reputation: u.reputation + 10 }),
+        'Lobby Discreto': (u) => ({ reputation: u.reputation + 20, allies: u.allies + 1 }),
+        'Planejamento de Poder': (u) => ({ reputation: u.reputation + 25 }),
+        'Relação com Empresários': (u) => ({ credits: u.credits + 75 }),
+        'Ausência Justificada': (u) => ({ reputation: u.reputation + 5 }),
+        'Voto Automático': (u) => ({ reputation: u.reputation + 10 }),
+        'Verba Oculta': (u) => ({ credits: u.credits + 30, reputation: u.reputation - 10 }),
+        'Presença Simulada': (u) => ({ reputation: u.reputation + 5 }),
+        'Projeto Social': (u) => ({ reputation: u.reputation + 25, allies: u.allies + 2 }),
+        'Audiência Participativa': (u) => ({ reputation: u.reputation + 20, allies: u.allies + 1 }),
+        'Fiscal de Bairro': (u) => ({ reputation: u.reputation + 15 }),
+        'Carisma de Praça': (u) => ({ reputation: u.reputation + 20, allies: u.allies + 1 }),
+        'Golpe de Bastidores': (u) => ({ reputation: u.reputation + 30, allies: u.allies + 2 }),
+        'Negociação Secreta': (u) => ({ credits: u.credits + 50, reputation: u.reputation - 15 }),
+        'Aumento Indevido': (u) => ({ credits: u.credits + 40, reputation: u.reputation - 10 }),
+        'Blindagem Pessoal': (u) => ({ reputation: u.reputation + 10 }),
+        'Representação Oficial': (u) => ({ reputation: u.reputation + 20 }),
+        'Apoio Institucional': (u) => ({ allies: u.allies + 2, reputation: u.reputation + 15 }),
+        'Programa Municipal': (u) => ({ reputation: u.reputation + 20, credits: u.credits + 10 }),
+        'Defensor da Base': (u) => ({ reputation: u.reputation + 15 }),
+        'Rachadinha Oficial': (u) => ({ credits: u.credits + 100, reputation: u.reputation - 20 }),
+        'Suborno Governamental': (u) => ({ credits: u.credits + 75, reputation: u.reputation - 15 }),
+        'Laranja Municipal': (u) => ({ credits: u.credits + 50, reputation: u.reputation - 10 }),
+        'Imprensa Comprada': (u) => ({ reputation: u.reputation + 20, mediaControl: true }),
+        'Gestão Pública': (u) => ({ reputation: u.reputation + 25, credits: u.credits + 20 }),
+        'Reeleição Estratégica': (u) => ({ reputation: u.reputation + 30 }),
+        'Orçamento Participativo': (u) => ({ reputation: u.reputation + 20, allies: u.allies + 2 }),
+        'Aliança Regional': (u) => ({ allies: u.allies + 3, reputation: u.reputation + 15 }),
+        'Voto Vendido': (u) => ({ credits: u.credits + 50, reputation: u.reputation - 15 }),
+        'Emenda Fantasma': (u) => ({ credits: u.credits + 75, reputation: u.reputation - 20 }),
+        'Imunidade Regional': (u) => ({ reputation: u.reputation + 10 }),
+        'Aliança Escusa': (u) => ({ allies: u.allies + 2, reputation: u.reputation - 10 }),
+        'Proposição Estadual': (u) => ({ reputation: u.reputation + 25 }),
+        'Defesa do Estado': (u) => ({ reputation: u.reputation + 20, allies: u.allies + 1 }),
+        'Comissão Popular': (u) => ({ reputation: u.reputation + 20 }),
+        'Articulação Municipal': (u) => ({ allies: u.allies + 2, reputation: u.reputation + 15 }),
+        'Lobby Escancarado': (u) => ({ credits: u.credits + 100, reputation: u.reputation - 20 }),
+        'Caixa Paralela': (u) => ({ credits: u.credits + 75, reputation: u.reputation - 15 }),
+        'Imunidade Parlamentar': (u) => ({ reputation: u.reputation + 15 }),
+        'Corrupção em Comissão': (u) => ({ credits: u.credits + 50, reputation: u.reputation - 10 }),
+        'Proposição Legislativa': (u) => ({ reputation: u.reputation + 30 }),
+        'Fundo Partidário': (u) => ({ credits: u.credits + 50, reputation: u.reputation + 10 }),
+        'Representatividade': (u) => ({ reputation: u.reputation + 25, allies: u.allies + 2 }),
+        'Articulação Nacional': (u) => ({ allies: u.allies + 3, reputation: u.reputation + 15 }),
+        'CPIs Controladas': (u) => ({ reputation: u.reputation + 20, mediaControl: true }),
+        'Voto Decisivo Vendido': (u) => ({ credits: u.credits + 100, reputation: u.reputation - 20 }),
+        'Imunidade Ampliada': (u) => ({ reputation: u.reputation + 15 }),
+        'Alinhamento Oculto': (u) => ({ allies: u.allies + 2, reputation: u.reputation - 10 }),
+        'Fiscalização Federal': (u) => ({ reputation: u.reputation + 25 }),
+        'Reputação Institucional': (u) => ({ reputation: u.reputation + 20 }),
+        'Comitê Estratégico': (u) => ({ allies: u.allies + 2, reputation: u.reputation + 15 }),
+        'Debate Público': (u) => ({ reputation: u.reputation + 20, allies: u.allies + 1 }),
+        'Imortalidade Política': (u) => ({ reputation: u.reputation + 30 }),
+        'Golpe Legislativo': (u) => ({ allies: u.allies + 3, reputation: u.reputation + 20 }),
+        'Controle do Senado': (u) => ({ reputation: u.reputation + 25, allies: u.allies + 2 }),
+        'Aliados Eternos': (u) => ({ allies: u.allies + 4, reputation: u.reputation + 15 }),
+        'Sabedoria Jurídica': (u) => ({ reputation: u.reputation + 30 }),
+        'Mentor Parlamentar': (u) => ({ allies: u.allies + 2, reputation: u.reputation + 15 }),
+        'Constituição Viva': (u) => ({ reputation: u.reputation + 25 }),
+        'Estabilidade Política': (u) => ({ reputation: u.reputation + 20 }),
+        'Parecer Suspeito': (u) => ({ reputation: u.reputation + 20, credits: u.credits + 50 }),
+        'Influência Disfarçada': (u) => ({ reputation: u.reputation + 15, allies: u.allies + 1 }),
+        'Verba Direcionada': (u) => ({ credits: u.credits + 75, reputation: u.reputation - 10 }),
+        'Divulgação Incompleta': (u) => ({ reputation: u.reputation + 10, mediaControl: true }),
+        'Pronunciamento Carismático': (u) => ({ reputation: u.reputation + 30, allies: u.allies + 2 }),
+        'Projeto de Impacto': (u) => ({ reputation: u.reputation + 25, credits: u.credits + 20 }),
+        'Rede Social Oficial': (u) => ({ reputation: u.reputation + 20, mediaControl: true }),
+        'Embate Direto': (u) => ({ reputation: u.reputation + 15, allies: u.allies + 1 }),
+        'Desvio Temporário': (u) => ({ credits: u.credits + 100, reputation: u.reputation - 20 }),
+        'Alianças Urgentes': (u) => ({ allies: u.allies + 2, reputation: u.reputation - 15 }),
+        'Gestão de Crise Simulada': (u) => ({ reputation: u.reputation + 20 }),
+        'Imprensa Controlada': (u) => ({ reputation: u.reputation + 15, mediaControl: true }),
+        'Comando Provisório': (u) => ({ reputation: u.reputation + 25 }),
+        'Unidade Nacional': (u) => ({ reputation: u.reputation + 20, allies: u.allies + 2 }),
+        'Nomeações Rápidas': (u) => ({ allies: u.allies + 3, reputation: u.reputation + 15 }),
+        'Equilíbrio Institucional': (u) => ({ reputation: u.reputation + 20 }),
+        'Golpe Interno': (u) => ({ reputation: u.reputation + 30, allies: u.allies + 2 }),
+        'Blindagem Jurídica': (u) => ({ reputation: u.reputation + 15 }),
+        'Controle de Ministérios': (u) => ({ credits: u.credits + 75, reputation: u.reputation - 10 }),
+        'Manipulação Partidária': (u) => ({ allies: u.allies + 2, reputation: u.reputation + 10 }),
+        'Apoio ao Presidente': (u) => ({ reputation: u.reputation + 20, allies: u.allies + 1 }),
+        'Representação Oficial': (u) => ({ reputation: u.reputation + 15 }),
+        'Rede de Alianças': (u) => ({ allies: u.allies + 3, reputation: u.reputation + 10 }),
+        'Defesa Constitucional': (u) => ({ reputation: u.reputation + 20 }),
+        'Poder Absoluto': (u) => ({ reputation: u.reputation + 40, allies: u.allies + 3 }),
+        'Propaganda Institucional': (u) => ({ reputation: u.reputation + 30, mediaControl: true }),
+        'Rede de Corrupção': (u) => ({ allies: u.allies + 4, reputation: u.reputation - 20 }),
+        'Manipulação Econômica': (u) => ({ credits: u.credits + 100, reputation: u.reputation - 15 }),
+        'Comando Supremo': (u) => ({ reputation: u.reputation + 35, allies: u.allies + 2 }),
+        'Diplomacia Internacional': (u) => ({ reputation: u.reputation + 30, allies: u.allies + 1 }),
+        'Criação de Ministérios': (u) => ({ allies: u.allies + 3, reputation: u.reputation + 15 }),
+        'Estado de Emergência': (u) => ({ reputation: u.reputation + 25 }),
+        'Sucessão Hereditária': (u) => ({ reputation: u.reputation + 30, allies: u.allies + 2 }),
+        'Poder Simbólico': (u) => ({ reputation: u.reputation + 25 }),
+        'Influência Cultural': (u) => ({ reputation: u.reputation + 20, allies: u.allies + 1 }),
+        'Conselho Real': (u) => ({ allies: u.allies + 2, reputation: u.reputation + 15 }),
+        'Censura Total': (u) => ({ reputation: u.reputation + 30, mediaControl: true }),
+        'Controle Militar': (u) => ({ reputation: u.reputation + 25, militaryControl: true }),
+        'Eleições Fictícias': (u) => ({ reputation: u.reputation + 20, allies: u.allies + 2 }),
+        'Eliminação Política': (u) => ({ reputation: u.reputation + 15, allies: u.allies + 1 }),
+        'Controle Global': (u) => ({ reputation: u.reputation + 50, allies: u.allies + 3 }),
+        'Inteligência Absoluta': (u) => ({ reputation: u.reputation + 40 }),
+        'Imortalidade Institucional': (u) => ({ reputation: u.reputation + 30 }),
+        'Poder Intocável': (u) => ({ reputation: u.reputation + 25, allies: u.allies + 2 })
+      };
+
+      const skillCosts = {
+        'Sobrevivência Urbana': { cost: 10, requiredLevel: 1 },
+        'Trabalho Oculto': { cost: 15, requiredLevel: 1 },
+        'Disfarce Improvisado': { cost: 20, requiredLevel: 2 },
+        'Rede Subterrânea': { cost: 30, requiredLevel: 3 },
+        'Coragem Invisível': { cost: 40, requiredLevel: 4 },
+        'Emprego Temporário': { cost: 20, requiredLevel: 1 },
+        'Aprendizado Cultural': { cost: 25, requiredLevel: 2 },
+        'Documentação Parcial': { cost: 30, requiredLevel: 3 },
+        'Senso de Comunidade': { cost: 40, requiredLevel: 4 },
+        'Ambição Silenciosa': { cost: 50, requiredLevel: 5 },
+        'Voz Ignorada': { cost: 10, requiredLevel: 1 },
+        'Contribuinte Invisível': { cost: 15, requiredLevel: 2 },
+        'Desobediência Silenciosa': { cost: 20, requiredLevel: 3 },
+        'Observador Indignado': { cost: 25, requiredLevel: 4 },
+        'Direito de Voto': { cost: 20, requiredLevel: 1 },
+        'Reclamação Formal': { cost: 25, requiredLevel: 2 },
+        'Trabalho Formal': { cost: 30, requiredLevel: 3 },
+        'Rede de Influência Local': { cost: 40, requiredLevel: 4 },
+        'Compartilhamento em Massa': { cost: 25, requiredLevel: 1 },
+        'Voto Emocional': { cost: 30, requiredLevel: 2 },
+        'Anti-fato': { cost: 35, requiredLevel: 3 },
+        'Engajamento Involuntário': { cost: 40, requiredLevel: 4 },
+        'Enxurrada de Correntes': { cost: 30, requiredLevel: 1 },
+        'Defesa de Grupo': { cost: 35, requiredLevel: 2 },
+        'Reação Instantânea': { cost: 40, requiredLevel: 3 },
+        'Censura Caseira': { cost: 45, requiredLevel: 4 },
+        'Aumento de Visibilidade': { cost: 40, requiredLevel: 1 },
+        'Live Estratégica': { cost: 50, requiredLevel: 2 },
+        'Parcerias Comerciais': { cost: 60, requiredLevel: 3 },
+        'Cancelamento Reverso': { cost: 70, requiredLevel: 4 },
+        'Manipulação de Narrativa': { cost: 50, requiredLevel: 1 },
+        'Discurso Programado': { cost: 60, requiredLevel: 2 },
+        'Bot Farm': { cost: 70, requiredLevel: 3 },
+        'Ataques Coordinados': { cost: 80, requiredLevel: 4 },
+        'Promessa Impossível': { cost: 60, requiredLevel: 1 },
+        'Campanha Porta a Porta': { cost: 70, requiredLevel: 2 },
+        'Caixa Zerado': { cost: 80, requiredLevel: 3 },
+        'Resistência Política': { cost: 90, requiredLevel: 4 },
+        'Desvio de Verba': { cost: 70, requiredLevel: 1 },
+        'Apadrinhamento Local': { cost: 80, requiredLevel: 2 },
+        'Fake Transparência': { cost: 90, requiredLevel: 3 },
+        'Negociação de Licitações': { cost: 100, requiredLevel: 4 },
+        'Gestão Comunitária': { cost: 70, requiredLevel: 1 },
+        'Fiscalização Selectiva': { cost: 80, requiredLevel: 2 },
+        'Evento de Praça': { cost: 90, requiredLevel: 3 },
+        'Aliança de Vizinhança': { cost: 100, requiredLevel: 4 },
+        'Caixa 2 Profissional': { cost: 80, requiredLevel: 1 },
+        'Lavagem Criativa': { cost: 90, requiredLevel: 2 },
+        'Colaborador Fantasma': { cost: 100, requiredLevel: 3 },
+        'Silenciamento de Testemunhas': { cost: 110, requiredLevel: 4 },
+        'Gestão de Fundos Oficiais': { cost: 80, requiredLevel: 1 },
+        'Contabilidade Transparente': { cost: 90, requiredLevel: 2 },
+        'Corte de Gastos': { cost: 100, requiredLevel: 3 },
+        'Incentivo Legal': { cost: 110, requiredLevel: 4 },
+        'Coordenação de Ações': { cost: 90, requiredLevel: 1 },
+        'Controle de Crise': { cost: 100, requiredLevel: 2 },
+        'Nomeação Estratégica': { cost: 110, requiredLevel: 3 },
+        'Operação Burocrática': { cost: 120, requiredLevel: 4 },
+        'Gestão Orçamentária': { cost: 90, requiredLevel: 1 },
+        'Lobby Discreto': { cost: 100, requiredLevel: 2 },
+        'Planejamento de Poder': { cost: 110, requiredLevel: 3 },
+        'Relação com Empresários': { cost: 120, requiredLevel: 4 },
+        'Ausência Justificada': { cost: 80, requiredLevel: 1 },
+        'Voto Automático': { cost: 90, requiredLevel: 2 },
+        'Verba Oculta': { cost: 100, requiredLevel: 3 },
+        'Presença Simulada': { cost: 110, requiredLevel: 4 },
+        'Projeto Social': { cost: 90, requiredLevel: 1 },
+        'Audiência Participativa': { cost: 100, requiredLevel: 2 },
+        'Fiscal de Bairro': { cost: 110, requiredLevel: 3 },
+        'Carisma de Praça': { cost: 120, requiredLevel: 4 },
+        'Golpe de Bastidores': { cost: 100, requiredLevel: 1 },
+        'Negociação Secreta': { cost: 110, requiredLevel: 2 },
+        'Aumento Indevido': { cost: 120, requiredLevel: 3 },
+        'Blindagem Pessoal': { cost: 130, requiredLevel: 4 },
+        'Representação Oficial': { cost: 100, requiredLevel: 1 },
+        'Apoio Institucional': { cost: 110, requiredLevel: 2 },
+        'Programa Municipal': { cost: 120, requiredLevel: 3 },
+        'Defensor da Base': { cost: 130, requiredLevel: 4 },
+        'Rachadinha Oficial': { cost: 110, requiredLevel: 1 },
+        'Suborno Governamental': { cost: 120, requiredLevel: 2 },
+        'Laranja Municipal': { cost: 130, requiredLevel: 3 },
+        'Imprensa Comprada': { cost: 140, requiredLevel: 4 },
+        'Gestão Pública': { cost: 110, requiredLevel: 1 },
+        'Reeleição Estratégica': { cost: 120, requiredLevel: 2 },
+        'Orçamento Participativo': { cost: 130, requiredLevel: 3 },
+        'Aliança Regional': { cost: 140, requiredLevel: 4 },
+        'Voto Vendido': { cost: 120, requiredLevel: 1 },
+        'Emenda Fantasma': { cost: 130, requiredLevel: 2 },
+        'Imunidade Regional': { cost: 140, requiredLevel: 3 },
+        'Aliança Escusa': { cost: 150, requiredLevel: 4 },
+        'Proposição Estadual': { cost: 120, requiredLevel: 1 },
+        'Defesa do Estado': { cost: 130, requiredLevel: 2 },
+        'Comissão Popular': { cost: 140, requiredLevel: 3 },
+        'Articulação Municipal': { cost: 150, requiredLevel: 4 },
+        'Lobby Escancarado': { cost: 130, requiredLevel: 1 },
+        'Caixa Paralela': { cost: 140, requiredLevel: 2 },
+        'Imunidade Parlamentar': { cost: 150, requiredLevel: 3 },
+        'Corrupção em Comissão': { cost: 160, requiredLevel: 4 },
+        'Proposição Legislativa': { cost: 130, requiredLevel: 1 },
+        'Fundo Partidário': { cost: 140, requiredLevel: 2 },
+        'Representatividade': { cost: 150, requiredLevel: 3 },
+        'Articulação Nacional': { cost: 160, requiredLevel: 4 },
+        'CPIs Controladas': { cost: 140, requiredLevel: 1 },
+        'Voto Decisivo Vendido': { cost: 150, requiredLevel: 2 },
+        'Imunidade Ampliada': { cost: 160, requiredLevel: 3 },
+        'Alinhamento Oculto': { cost: 170, requiredLevel: 4 },
+        'Fiscalização Federal': { cost: 140, requiredLevel: 1 },
+        'Reputação Institucional': { cost: 150, requiredLevel: 2 },
+        'Comitê Estratégico': { cost: 160, requiredLevel: 3 },
+        'Debate Público': { cost: 170, requiredLevel: 4 },
+        'Imortalidade Política': { cost: 150, requiredLevel: 1 },
+        'Golpe Legislativo': { cost: 160, requiredLevel: 2 },
+        'Controle do Senado': { cost: 170, requiredLevel: 3 },
+        'Aliados Eternos': { cost: 180, requiredLevel: 4 },
+        'Sabedoria Jurídica': { cost: 150, requiredLevel: 1 },
+        'Mentor Parlamentar': { cost: 160, requiredLevel: 2 },
+        'Constituição Viva': { cost: 170, requiredLevel: 3 },
+        'Estabilidade Política': { cost: 180, requiredLevel: 4 },
+        'Parecer Suspeito': { cost: 160, requiredLevel: 1 },
+        'Influência Disfarçada': { cost: 170, requiredLevel: 2 },
+        'Verba Direcionada': { cost: 180, requiredLevel: 3 },
+        'Divulgação Incompleta': { cost: 190, requiredLevel: 4 },
+        'Pronunciamento Carismático': { cost: 160, requiredLevel: 1 },
+        'Projeto de Impacto': { cost: 170, requiredLevel: 2 },
+        'Rede Social Oficial': { cost: 180, requiredLevel: 3 },
+        'Embate Direto': { cost: 190, requiredLevel: 4 },
+        'Desvio Temporário': { cost: 170, requiredLevel: 1 },
+        'Alianças Urgentes': { cost: 180, requiredLevel: 2 },
+        'Gestão de Crise Simulada': { cost: 190, requiredLevel: 3 },
+        'Imprensa Controlada': { cost: 200, requiredLevel: 4 },
+        'Comando Provisório': { cost: 170, requiredLevel: 1 },
+        'Unidade Nacional': { cost: 180, requiredLevel: 2 },
+        'Nomeações Rápidas': { cost: 190, requiredLevel: 3 },
+        'Equilíbrio Institucional': { cost: 200, requiredLevel: 4 },
+        'Golpe Interno': { cost: 180, requiredLevel: 1 },
+        'Blindagem Jurídica': { cost: 190, requiredLevel: 2 },
+        'Controle de Ministérios': { cost: 200, requiredLevel: 3 },
+        'Manipulação Partidária': { cost: 210, requiredLevel: 4 },
+        'Apoio ao Presidente': { cost: 180, requiredLevel: 1 },
+        'Representação Oficial': { cost: 190, requiredLevel: 2 },
+        'Rede de Alianças': { cost: 200, requiredLevel: 3 },
+        'Defesa Constitucional': { cost: 210, requiredLevel: 4 },
+        'Poder Absoluto': { cost: 190, requiredLevel: 1 },
+        'Propaganda Institucional': { cost: 200, requiredLevel: 2 },
+        'Rede de Corrupção': { cost: 210, requiredLevel: 3 },
+        'Manipulação Econômica': { cost: 220, requiredLevel: 4 },
+        'Comando Supremo': { cost: 190, requiredLevel: 1 },
+        'Diplomacia Internacional': { cost: 200, requiredLevel: 2 },
+        'Criação de Ministérios': { cost: 210, requiredLevel: 3 },
+        'Estado de Emergência': { cost: 220, requiredLevel: 4 },
+        'Sucessão Hereditária': { cost: 200, requiredLevel: 1 },
+        'Poder Simbólico': { cost: 210, requiredLevel: 2 },
+        'Influência Cultural': { cost: 220, requiredLevel: 3 },
+        'Conselho Real': { cost: 230, requiredLevel: 4 },
+        'Censura Total': { cost: 210, requiredLevel: 1 },
+        'Controle Militar': { cost: 220, requiredLevel: 2 },
+        'Eleições Fictícias': { cost: 230, requiredLevel: 3 },
+        'Eliminação Política': { cost: 240, requiredLevel: 4 },
+        'Controle Global': { cost: 220, requiredLevel: 1 },
+        'Inteligência Absoluta': { cost: 230, requiredLevel: 2 },
+        'Imortalidade Institucional': { cost: 240, requiredLevel: 3 },
+        'Poder Intocável': { cost: 250, requiredLevel: 4 }
+      };
+
+      const roleSkills = {
+        'Imigrante Ilegal': ['Sobrevivência Urbana', 'Trabalho Oculto', 'Disfarce Improvisado', 'Rede Subterrânea', 'Coragem Invisível'],
+        'Imigrante': ['Emprego Temporário', 'Aprendizado Cultural', 'Documentação Parcial', 'Senso de Comunidade', 'Ambição Silenciosa'],
+        'Cidadão Sem Direitos': ['Voz Ignorada', 'Contribuinte Invisível', 'Desobediência Silenciosa', 'Observador Indignado'],
+        'Cidadão': ['Direito de Voto', 'Reclamação Formal', 'Trabalho Formal', 'Rede de Influência Local'],
+        'Eleitor Manipulado': ['Compartilhamento em Massa', 'Voto Emocional', 'Anti-fato', 'Engajamento Involuntário'],
+        'Militante de WhatsApp': ['Enxurrada de Correntes', 'Defesa de Grupo', 'Reação Instantânea', 'Censura Caseira'],
+        'Influenciador': ['Aumento de Visibilidade', 'Live Estratégica', 'Parcerias Comerciais', 'Cancelamento Reverso'],
+        'Influenciador Político': ['Manipulação de Narrativa', 'Discurso Programado', 'Bot Farm', 'Ataques Coordinados'],
+        'Candidato de Baixo Orçamento': ['Promessa Impossível', 'Campanha Porta a Porta', 'Caixa Zerado', 'Resistência Política'],
+        'Prefeito de Bairro Corrupto': ['Desvio de Verba', 'Apadrinhamento Local', 'Fake Transparência', 'Negociação de Licitações'],
+        'Prefeito de Bairro': ['Gestão Comunitária', 'Fiscalização Selectiva', 'Evento de Praça', 'Aliança de Vizinhança'],
+        'Tesoureiro de Campanha Corrupto': ['Caixa 2 Profissional', 'Lavagem Criativa', 'Colaborador Fantasma', 'Silenciamento de Testemunhas'],
+        'Tesoureiro de Campanha': ['Gestão de Fundos Oficiais', 'Contabilidade Transparente', 'Corte de Gastos', 'Incentivo Legal'],
+        'Diretor Executivo de Gabinete': ['Coordenação de Ações', 'Controle de Crise', 'Nomeação Estratégica', 'Operação Burocrática'],
+        'Diretor Executivo': ['Gestão Orçamentária', 'Lobby Discreto', 'Planejamento de Poder', 'Relação com Empresários'],
+        'Vereador Fantasma': ['Ausência Justificada', 'Voto Automático', 'Verba Oculta', 'Presença Simulada'],
+        'Vereador Popular': ['Projeto Social', 'Audiência Participativa', 'Fiscal de Bairro', 'Carisma de Praça'],
+        'Vice Prefeito Corrupto': ['Golpe de Bastidores', 'Negociação Secreta', 'Aumento Indevido', 'Blindagem Pessoal'],
+        'Vice Prefeito': ['Representação Oficial', 'Apoio Institucional', 'Programa Municipal', 'Defensor da Base'],
+        'Prefeito Corrupto': ['Rachadinha Oficial', 'Suborno Governamental', 'Laranja Municipal', 'Imprensa Comprada'],
+        'Prefeito': ['Gestão Pública', 'Reeleição Estratégica', 'Orçamento Participativo', 'Aliança Regional'],
+        'Deputado Estadual Corrupto': ['Voto Vendido', 'Emenda Fantasma', 'Imunidade Regional', 'Aliança Escusa'],
+        'Deputado Estadual': ['Proposição Estadual', 'Defesa do Estado', 'Comissão Popular', 'Articulação Municipal'],
+        'Deputado Federal Corrupto': ['Lobby Escancarado', 'Caixa Paralela', 'Imunidade Parlamentar', 'Corrupção em Comissão'],
+        'Deputado Federal': ['Proposição Legislativa', 'Fundo Partidário', 'Representatividade', 'Articulação Nacional'],
+        'Senador Corrupto': ['CPIs Controladas', 'Voto Decisivo Vendido', 'Imunidade Ampliada', 'Alinhamento Oculto'],
+        'Senador': ['Fiscalização Federal', 'Reputação Institucional', 'Comitê Estratégico', 'Debate Público'],
+        'Senador Vitalício Corrupto': ['Imortalidade Política', 'Golpe Legislativo', 'Controle do Senado', 'Aliados Eternos'],
+        'Senador Vitalício': ['Sabedoria Jurídica', 'Mentor Parlamentar', 'Constituição Viva', 'Estabilidade Política'],
+        'Ministro Questionável': ['Parecer Suspeito', 'Influência Disfarçada', 'Verba Direcionada', 'Divulgação Incompleta'],
+        'Ministro Populista': ['Pronunciamento Carismático', 'Projeto de Impacto', 'Rede Social Oficial', 'Embate Direto'],
+        'Presidente Interino Corrupto': ['Desvio Temporário', 'Alianças Urgentes', 'Gestão de Crise Simulada', 'Imprensa Controlada'],
+        'Presidente Interino': ['Comando Provisório', 'Unidade Nacional', 'Nomeações Rápidas', 'Equilíbrio Institucional'],
+        'Vice-Presidente Corrupto': ['Golpe Interno', 'Blindagem Jurídica', 'Controle de Ministérios', 'Manipulação Partidária'],
+        'Vice-Presidente': ['Apoio ao Presidente', 'Representação Oficial', 'Rede de Alianças', 'Defesa Constitucional'],
+        'Presidente Corrupto': ['Poder Absoluto', 'Propaganda Institucional', 'Rede de Corrupção', 'Manipulação Econômica'],
+        'Presidente': ['Comando Supremo', 'Diplomacia Internacional', 'Criação de Ministérios', 'Estado de Emergência'],
+        'Monarca': ['Sucessão Hereditária', 'Poder Simbólico', 'Influência Cultural', 'Conselho Real'],
+        'Ditador': ['Censura Total', 'Controle Militar', 'Eleições Fictícias', 'Eliminação Política'],
+        'Ditador Supremo': ['Controle Global', 'Inteligência Absoluta', 'Imortalidade Institucional', 'Poder Intocável']
+      };
+
+      return (
+        <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4">
+          <h1 className="text-3xl font-bold mb-4">Skills - {user.nation} {getFlagEmoji(user.nation)}</h1>
+          <p>Nome: {user.name} 👤 | Cargo: {user.role} Lvl {user.level} 🎩</p>
+          <p>Pontos: {user.score} ⭐ | Créditos: {user.credits} 💰</p>
+          <div className="w-full max-w-md mt-4">
+            <h2 className="text-xl font-semibold mb-2">Habilidades Disponíveis</h2>
+            {roleSkills[user.role] && roleSkills[user.role].map(skill => {
+              const { cost: baseCost, requiredLevel } = skillCosts[skill];
+              const currentLevel = user.skillLevels[skill] || 0;
+              const currentCost = Math.ceil(calculateSkillCost(skill, currentLevel));
+              return (
+                <button
+                  key={skill}
+                  onClick={() => useSkill(skill, skillEffects[skill], baseCost, requiredLevel)}
+                  className={`w-full py-2 px-4 mb-2 rounded ${user.level >= requiredLevel && user.score >= currentCost ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400 cursor-not-allowed'} text-white`}
+                  disabled={user.level < requiredLevel || user.score < currentCost || currentLevel >= 100}
+                >
+                  {skill} Lvl {currentLevel} (Custo: {currentCost}⭐, Nível Requerido: {requiredLevel})
+                </button>
+              );
+            })}
+          </div>
+          {error && <p className="text-red-500 text-center mt-2">{error}</p>}
+          <button
+            onClick={() => window.location.href = '/game.html'}
+            className="mt-4 py-2 px-4 bg-gray-500 text-white rounded hover:bg-gray-600"
+          >
+            Voltar
+          </button>
+        </div>
+      );
+    }
+
+    function getFlagEmoji(nation) {
+      const flags = {
+        'Brasil': '🇧🇷', 'EUA': '🇺🇸', 'China': '🇨🇳', 'Rússia': '🇷🇺',
+        'França': '🇫🇷', 'Alemanha': '🇩🇪', 'Japão': '🇯🇵', 'Índia': '🇮🇳',
+        'Reino Unido': '🇬🇧', 'Canadá': '🇨🇦'
+      };
+      return flags[nation] || '';
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<Skills />);
+  </script>
+</body>
+</html>

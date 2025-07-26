@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Economia - Política Game</title>
+  <link rel="icon" href="favicon.png" type="image/png">
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, Component } = React;
+
+    class ErrorBoundary extends Component {
+      state = { hasError: false, errorMessage: '' };
+
+      static getDerivedStateFromError(error) {
+        return { hasError: true, errorMessage: 'Ocorreu um erro. Tente recarregar ou fazer login novamente.' };
+      }
+
+      componentDidCatch(error, errorInfo) {
+        console.error('Erro capturado:', error, errorInfo);
+      }
+
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+              <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+                <h1 className="text-2xl font-bold mb-4">Erro</h1>
+                <p>{this.state.errorMessage}</p>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('user');
+                    window.location.href = '/index.html';
+                  }}
+                  className="mt-4 py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Fazer Login Novamente
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-4 py-2 px-4 bg-green-500 text-white rounded hover:bg-green-600 ml-2"
+                >
+                  Recarregar
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    function Economy() {
+      const [user, setUser] = useState(null);
+      const [gameDate, setGameDate] = useState(() => {
+        const savedDate = localStorage.getItem('gameDate');
+        return savedDate ? JSON.parse(savedDate) : { year: 1989, month: 1, day: 1, lastUpdate: Date.now() };
+      });
+      const [assets, setAssets] = useState({ realcoin: 0, stock: 0 });
+      const [globalCapital, setGlobalCapital] = useState({});
+      const [error, setError] = useState('');
+
+      useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser && storedUser.trim() !== '') {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            if (parsedUser && typeof parsedUser === 'object') {
+              setUser(parsedUser);
+              const savedAssets = JSON.parse(localStorage.getItem('assets') || '{"realcoin": 0, "stock": 0}');
+              setAssets(savedAssets);
+              updateGameDate();
+              fetchGlobalCapital();
+            } else {
+              throw new Error('Dados de usuário inválidos');
+            }
+          } catch (e) {
+            console.error('Erro ao parsear usuário:', e);
+            setUser(null);
+            localStorage.removeItem('user');
+            window.location.href = '/index.html';
+          }
+        } else {
+          window.location.href = '/index.html';
+        }
+        const interval = setInterval(updateGameDate, 1000);
+        return () => clearInterval(interval);
+      }, []);
+
+      const updateGameDate = () => {
+        const now = Date.now();
+        const savedDate = localStorage.getItem('gameDate') ? JSON.parse(localStorage.getItem('gameDate')) : { year: 1989, month: 1, day: 1, lastUpdate: Date.now() };
+        const elapsedMs = now - savedDate.lastUpdate;
+        const msPerDay = 1000;
+        const msPerMonth = 30000;
+        const msPerYear = 360000;
+
+        const totalDays = Math.floor(elapsedMs / msPerDay);
+        const totalMonths = Math.floor(elapsedMs / msPerMonth);
+        const totalYears = Math.floor(elapsedMs / msPerYear);
+
+        let year = savedDate.year + totalYears;
+        let month = savedDate.month + (totalMonths % 12);
+        let day = savedDate.day + (totalDays % 30);
+
+        if (day > 30) {
+          day = day % 30 || 30;
+          month += Math.floor(day / 30);
+        }
+        if (month > 12) {
+          month = month % 12 || 12;
+          year += Math.floor(month / 12);
+        }
+
+        const newDate = { year, month, day, lastUpdate: now };
+        setGameDate(newDate);
+        localStorage.setItem('gameDate', JSON.stringify(newDate));
+      };
+
+      const fetchGlobalCapital = () => {
+        // Simulação local devido a erro 404
+        const mockCapital = {
+          'EUA': 1600000000,
+          'China': 2000000000,
+          'Brasil': 500000000
+        };
+        setGlobalCapital(mockCapital);
+      };
+
+      const buyAsset = (type, cost) => {
+        if (user && user.credits != null && user.credits >= cost) {
+          const updatedUser = { ...user, credits: Number((user.credits - cost).toFixed(2)) || 0 };
+          const updatedAssets = { ...assets, [type]: assets[type] + 1 };
+          setUser(updatedUser);
+          setAssets(updatedAssets);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          localStorage.setItem('assets', JSON.stringify(updatedAssets));
+        } else {
+          setError('Créditos insuficientes!');
+          setTimeout(() => setError(''), 2000);
+        }
+      };
+
+      const sellAsset = (type) => {
+        if (user && assets[type] > 0) {
+          const updatedUser = { ...user, credits: Number((user.credits + 50).toFixed(2)) || 0 };
+          const updatedAssets = { ...assets, [type]: assets[type] - 1 };
+          setUser(updatedUser);
+          setAssets(updatedAssets);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          localStorage.setItem('assets', JSON.stringify(updatedAssets));
+        } else {
+          setError('Nada para vender!');
+          setTimeout(() => setError(''), 2000);
+        }
+      };
+
+      const moneyLaundering = () => {
+        if (!user) return;
+        const maxLaunder = (gameDate.year - 1989) * 100;
+        const amount = Math.min(user.credits != null ? user.credits : 0, maxLaunder);
+        if (amount <= 0) {
+          setError('Sem créditos para lavar!');
+          setTimeout(() => setError(''), 2000);
+          return;
+        }
+        const eliteRoles = ['Ditador Supremo', 'Ditador', 'Monarca'];
+        if (!eliteRoles.includes(user.role) && Math.random() < 0.3) {
+          const loss = Number(((user.credits != null ? user.credits : 0) * 0.75).toFixed(2)) || 0;
+          const updatedUser = { ...user, credits: Number((user.credits != null ? user.credits - loss : 0).toFixed(2)) };
+          setUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          setError(`FIF pegou você! Perdeu ${loss} créditos.`);
+        } else {
+          const updatedUser = { ...user, credits: Number((user.credits != null ? user.credits - amount : 0).toFixed(2)), score: Number(((user.score != null ? user.score : 0) + amount * 2).toFixed(2)) };
+          setUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          setError(`Lavagem de ${amount} créditos concluída! +${amount * 2} pontos.`);
+        }
+        setTimeout(() => setError(''), 2000);
+      };
+
+      if (!user) return <div>Carregando... ⏳</div>;
+
+      return (
+        <ErrorBoundary>
+          <div className="min-h-screen bg-gray-100 flex">
+            <div className="w-3/4 p-8 text-center">
+              <h1 className="text-3xl font-bold mb-4">Economia</h1>
+              <div className="mt-4">
+                <h2 className="text-2xl font-semibold">Ativos</h2>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <p>Realcoin (50 Créditos)</p>
+                    <button onClick={() => buyAsset('realcoin', 50)} className="mt-1 py-1 px-2 bg-green-500 text-white rounded hover:bg-green-600">Comprar</button>
+                    <button onClick={() => sellAsset('realcoin')} className="mt-1 ml-2 py-1 px-2 bg-red-500 text-white rounded hover:bg-red-600">Vender</button>
+                    <p className="mt-1">Possui: {assets.realcoin}</p>
+                  </div>
+                  <div>
+                    <p>Stock (100 Créditos)</p>
+                    <button onClick={() => buyAsset('stock', 100)} className="mt-1 py-1 px-2 bg-green-500 text-white rounded hover:bg-green-600">Comprar</button>
+                    <button onClick={() => sellAsset('stock')} className="mt-1 ml-2 py-1 px-2 bg-red-500 text-white rounded hover:bg-red-600">Vender</button>
+                    <p className="mt-1">Possui: {assets.stock}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4">
+                <h2 className="text-2xl font-semibold">Bolsa de Valores</h2>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <p>Realcoin (50 Créditos)</p>
+                    <button onClick={() => buyAsset('realcoin', 50)} className="mt-1 py-1 px-2 bg-green-500 text-white rounded hover:bg-green-600">Comprar</button>
+                    <button onClick={() => sellAsset('realcoin')} className="mt-1 ml-2 py-1 px-2 bg-red-500 text-white rounded hover:bg-red-600">Vender</button>
+                    <p className="mt-1">Possui: {assets.realcoin}</p>
+                  </div>
+                  <div>
+                    <p>Stock (100 Créditos)</p>
+                    <button onClick={() => buyAsset('stock', 100)} className="mt-1 py-1 px-2 bg-green-500 text-white rounded hover:bg-green-600">Comprar</button>
+                    <button onClick={() => sellAsset('stock')} className="mt-1 ml-2 py-1 px-2 bg-red-500 text-white rounded hover:bg-red-600">Vender</button>
+                    <p className="mt-1">Possui: {assets.stock}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4">
+                <h2 className="text-2xl font-semibold">Lavagem de Dinheiro</h2>
+                <p>Máximo: {(gameDate.year - 1989) * 100} Créditos</p>
+                <button onClick={moneyLaundering} className="mt-2 py-2 px-4 bg-yellow-500 text-white rounded hover:bg-yellow-600">Lavar Dinheiro</button>
+              </div>
+            </div>
+            <div className="w-1/4 bg-gray-200 p-4">
+              <h3 className="text-xl font-semibold mb-4">Painel do Jogador</h3>
+              <p>Data do Jogo: {`${gameDate.day}/${gameDate.month}/${gameDate.year}`}</p>
+              <p>Nome: {user.name || 'Desconhecido'} 👤</p>
+              <p>Nação: {user.nation ? `${user.nation} ${getFlagEmoji(user.nation)}` : 'Sem nação'}</p>
+              <p>Cargo: {user.role ? `${user.role} Lvl ${user.level || 0}` : 'Sem cargo'} 🎩</p>
+              <p>Nível: {user.level || 0} 📊</p>
+              <p>Créditos: {user.credits != null ? Number(user.credits.toFixed(2)) : 0} 💰</p>
+              <p>Pontos: {user.score != null ? Number(user.score.toFixed(2)) : 0} ⭐</p>
+              <p>Reputação: {user.reputation != null ? Number(user.reputation.toFixed(2)) : 0} 🌟</p>
+              <p>Aliados: {user.allies != null ? Number(user.allies.toFixed(2)) : 0} 🤝</p>
+            </div>
+            {error && <p className="text-center mt-4 text-red-500">{error}</p>}
+            <button
+              onClick={() => window.location.href = '/game.html'}
+              className="mt-4 py-2 px-4 bg-gray-500 text-white rounded hover:bg-gray-600 fixed bottom-4 left-1/2 transform -translate-x-1/2"
+            >
+              Voltar
+            </button>
+          </div>
+        </ErrorBoundary>
+      );
+    }
+
+    function getFlagEmoji(nation) {
+      const flags = {
+        'Brasil': '🇧🇷', 'EUA': '🇺🇸', 'China': '🇨🇳', 'Rússia': '🇷🇺',
+        'França': '🇫🇷', 'Alemanha': '🇩🇪', 'Japão': '🇯🇵', 'Índia': '🇮🇳',
+        'Reino Unido': '🇬🇧', 'Canadá': '🇨🇦'
+      };
+      return flags[nation] || '';
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<Economy />);
+  </script>
+</body>
+</html>

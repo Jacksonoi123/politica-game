@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notícias - Política Game</title>
+  <link rel="icon" href="favicon.png" type="image/png">
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function News() {
+      const [user, setUser] = useState(null);
+      const [news, setNews] = useState([]);
+      const [newNews, setNewNews] = useState('');
+      const [error, setError] = useState('');
+
+      useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser && storedUser.trim() !== '') {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            setUser(parsedUser);
+            fetchNews(parsedUser.nation);
+          } catch (e) {
+            console.error('Erro ao parsear usuário:', e);
+            setUser(null);
+            localStorage.removeItem('user');
+            window.location.href = '/index.html';
+          }
+        } else {
+          window.location.href = '/index.html';
+        }
+      }, []);
+
+      const fetchNews = async (nation) => {
+        try {
+          const response = await fetch(`https://politicagame.netlify.app/api/news/${nation}`);
+          const data = await response.json();
+          if (response.ok) setNews(data.news || []);
+        } catch (err) {
+          console.error('Erro ao carregar notícias:', err);
+        }
+      };
+
+      const postNews = () => {
+        if (!user || !['Ditador Supremo', 'Presidente', 'Primeiro-Ministro', 'Monarca', 'Ditador'].includes(user.role)) {
+          setError('Apenas cargos de elite podem postar notícias!');
+          setTimeout(() => setError(''), 2000);
+          return;
+        }
+        if (!newNews.trim()) {
+          setError('Digite uma notícia!');
+          setTimeout(() => setError(''), 2000);
+          return;
+        }
+        const updatedNews = [...news, { title: newNews, author: user.name, date: new Date().toLocaleDateString() }];
+        setNews(updatedNews);
+        setNewNews('');
+        setError('Notícia postada com sucesso!');
+        setTimeout(() => setError(''), 2000);
+      };
+
+      if (!user) return <div>Carregando... ⏳</div>;
+
+      return (
+        <div className="min-h-screen bg-gray-100 p-4">
+          <h1 className="text-3xl font-bold mb-4 text-center">Notícias - {user.nation}</h1>
+          {['Ditador Supremo', 'Presidente', 'Primeiro-Ministro', 'Monarca', 'Ditador'].includes(user.role) && (
+            <div className="mb-4 p-4 bg-white rounded-lg shadow">
+              <h2 className="text-xl font-semibold mb-2">Postar Notícia</h2>
+              <textarea
+                value={newNews}
+                onChange={(e) => setNewNews(e.target.value)}
+                className="w-full p-2 border rounded mb-2"
+                placeholder="Digite sua notícia..."
+              />
+              <button
+                onClick={postNews}
+                className="py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Publicar 📰
+              </button>
+              {error && <p className="text-red-500 mt-2">{error}</p>}
+            </div>
+          )}
+          <div className="space-y-4">
+            {news.length > 0 ? (
+              news.map((item, index) => (
+                <div key={index} className="p-4 bg-white rounded-lg shadow">
+                  <h3 className="text-lg font-semibold">{item.title}</h3>
+                  <p className="text-sm text-gray-600">Por {item.author} - {item.date}</p>
+                </div>
+              ))
+            ) : (
+              <p>Nenhuma notícia disponível. {['Ditador Supremo', 'Presidente', 'Primeiro-Ministro', 'Monarca', 'Ditador'].includes(user.role) ? 'Poste uma notícia!' : 'Aguarde notícias!'}</p>
+            )}
+          </div>
+          <button
+            onClick={() => window.location.href = '/game.html'}
+            className="mt-4 py-2 px-4 bg-gray-500 text-white rounded hover:bg-gray-600"
+          >
+            Voltar
+          </button>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<News />);
+  </script>
+</body>
+</html>

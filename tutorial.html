@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutorial - Política Game</title>
+  <link rel="icon" href="favicon.png" type="image/png">
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function Tutorial() {
+      const [user, setUser] = useState(null);
+
+      useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          if (!parsedUser.tutorialCompleted) {
+            const updatedUser = { ...parsedUser, tutorialCompleted: true };
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          }
+        } else {
+          window.location.href = '/index.html';
+        }
+      }, []);
+
+      if (!user) return <div>Carregando... ⏳</div>;
+
+      return (
+        <div className="min-h-screen bg-gray-100 p-4">
+          <h1 className="text-3xl font-bold mb-4 text-center">Tutorial - Política Game</h1>
+          <div className="bg-white p-6 rounded-lg shadow-lg space-y-4">
+            <h2 className="text-xl font-semibold">Bem-vindo ao Política Game! 🎮</h2>
+            <p>Este tutorial vai te guiar pelas principais mecânicas do jogo. Vamos começar!</p>
+
+            <h3 className="text-lg font-medium">1. Progressão e Níveis 📈</h3>
+            <p>Você começa como 'Imigrante Ilegal' e pode evoluir seu cargo usando pontos na seção 'Evoluir'. Cada novo cargo custa mais pontos e aumenta seu nível. A loja também pode aumentar seu nível ao comprar itens!</p>
+
+            <h3 className="text-lg font-medium">2. Economia 💰</h3>
+            <p>Acesse a seção 'Economia' para gerenciar seus créditos. Compre e venda ações na Bolsa de Valores, invista em criptomoedas, ou até tente lavar dinheiro (com risco de ser pego pela FIF!). Os preços variam com eventos globais como crises e pandemias.</p>
+
+            <h3 className="text-lg font-medium">3. Notícias 📰</h3>
+            <p>Fique de olho nas notícias em 'Notícias' e 'Economia'. Elas refletem eventos do jogo, como guerras ou escândalos, e podem afetar sua estratégia. Todas as notícias da economia aparecem na seção de notícias geral.</p>
+
+            <h3 className="text-lg font-medium">4. Golpes de Estado 💣</h3>
+            <p>Se não for um cargo de elite, tente um golpe em 'Golpe de Estado'. Sucesso depende de aliados, reputação e sorte. Cuidado: falhar pode custar caro!</p>
+
+            <h3 className="text-lg font-medium">5. Skills 🎓</h3>
+            <p>Melhore suas habilidades em 'Skills' para ganhar vantagens, como controle da mídia ou militar. Use pontos para desbloquear novas opções e subir de nível.</p>
+
+            <h3 className="text-lg font-medium">6. Trabalho 💼</h3>
+            <p>você pode realizar trabalhos específicos para seu cargo! Acesse a seção "Trabalho" para:</p>
+            <ul className="list-disc pl-5">
+              <li>Escolher entre 3 opções de trabalho com diferentes recompensas e tempos.</li>
+              <li>Completar tarefas em dias fictícios e ganhar pontos.</li>
+              <li>Enfrentar eventos aleatórios que podem trazer bônus ou penalidades.</li>
+            </ul>
+
+                        <h3 className="text-lg font-medium">7. Dicas Gerais 🌟</h3>
+            <ul className="list-disc pl-5">
+              <li>Ganhe pontos com a opção 'Ganhar 50 Pontos' (cooldown de 90 minutos).</li>
+              <li>Compre aliados, reputação e créditos na loja.</li>
+              <li>Mude de nação a qualquer momento, mas reinicia seu progresso.</li>
+            </ul>
+
+            <button
+              onClick={() => window.location.href = '/game.html'}
+              className="mt-4 w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Entendido! Voltar ao Jogo
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<Tutorial />);
+  </script>
+</body>
+</html>
